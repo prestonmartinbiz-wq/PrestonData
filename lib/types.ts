@@ -120,6 +120,28 @@ export type PowerData = {
   items: PowerAvailability[];
 };
 
+/**
+ * Optional metadata about a substation: a public/known name, a location or
+ * service area, and an optional group used to combine two nearby substations
+ * (an "ownership group") into a single bucket.
+ */
+export type SubstationMeta = {
+  /** Canonical substation name as it appears in leads/power data, e.g. "El Rancho". */
+  name: string;
+  /** Alternate/public name, if different. */
+  aka?: string;
+  /** Location or service area (may be a service area derived from requests). */
+  location?: string;
+  /** Combined bucket name when grouping nearby substations, e.g. "Highland / El Rancho". */
+  group?: string;
+  /** Freeform note. */
+  notes?: string;
+};
+
+export type SubstationsData = {
+  items: SubstationMeta[];
+};
+
 export type TeamData = {
   members: TeamMember[];
 };

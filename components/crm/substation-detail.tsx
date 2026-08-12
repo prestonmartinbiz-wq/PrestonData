@@ -155,6 +155,14 @@ export function SubstationDetail({
               Substation
             </p>
             <h1 className="text-2xl font-semibold tracking-tight">{bucket.name}</h1>
+            {bucket.location ? (
+              <p className="mt-0.5 text-sm text-slate-500">{bucket.location}</p>
+            ) : null}
+            {bucket.members.length > 1 ? (
+              <p className="mt-0.5 text-xs text-slate-400">
+                Grouped substations: {bucket.members.join(" + ")}
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
             <CrexiUpload

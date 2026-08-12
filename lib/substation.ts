@@ -1,4 +1,4 @@
-import type { Lead, PowerAvailability } from "@/lib/types";
+import type { Lead, PowerAvailability, SubstationMeta } from "@/lib/types";
 import { needsContact, slugify } from "@/lib/utils";
 
 /** Substation/type/acres metadata embedded in a lead's Notes field. */
@@ -64,6 +64,12 @@ export type SubstationBucket = {
   power: PowerAvailability[];
   feederCount: number;
   totalMva: number | null;
+  /** Location or service area, from substation metadata. */
+  location?: string;
+  /** Alternate/public name, from substation metadata. */
+  aka?: string;
+  /** Underlying substation names when this bucket groups more than one. */
+  members: string[];
 };
 
 function emptyBucket(name: string): SubstationBucket {
@@ -80,7 +86,30 @@ function emptyBucket(name: string): SubstationBucket {
     power: [],
     feederCount: 0,
     totalMva: null,
+    members: [],
   };
+}
+
+/** Index substation metadata by lowercased name for quick lookup. */
+function indexMeta(metas: SubstationMeta[]): Map<string, SubstationMeta> {
+  const map = new Map<string, SubstationMeta>();
+  for (const m of metas) {
+    if (m.name) map.set(m.name.trim().toLowerCase(), m);
+  }
+  return map;
+}
+
+/**
+ * Resolve a raw substation name to its display bucket name, applying any group
+ * alias from metadata (so two nearby substations collapse into one bucket).
+ */
+function resolveDisplay(
+  name: string,
+  metaByName: Map<string, SubstationMeta>
+): { display: string; member: string } {
+  const member = (name || "Unassigned").trim();
+  const meta = metaByName.get(member.toLowerCase());
+  return { display: (meta?.group || member).trim(), member };
 }
 
 function feederStats(power: PowerAvailability[]): {
@@ -109,18 +138,24 @@ function feederStats(power: PowerAvailability[]): {
  */
 export function buildSubstationBuckets(
   leads: Lead[],
-  power: PowerAvailability[] = []
+  power: PowerAvailability[] = [],
+  metas: SubstationMeta[] = []
 ): SubstationBucket[] {
   const buckets = new Map<string, SubstationBucket>();
+  const metaByName = indexMeta(metas);
+  const memberSets = new Map<string, Set<string>>();
 
-  const keyFor = (name: string) => (name || UNASSIGNED).trim().toLowerCase();
-
-  const ensure = (name: string): SubstationBucket => {
-    const key = keyFor(name);
+  const ensure = (rawName: string): SubstationBucket => {
+    const { display, member } = resolveDisplay(rawName || UNASSIGNED, metaByName);
+    const key = display.toLowerCase();
     let bucket = buckets.get(key);
     if (!bucket) {
-      bucket = emptyBucket((name || UNASSIGNED).trim());
+      bucket = emptyBucket(display);
       buckets.set(key, bucket);
+      memberSets.set(key, new Set());
+    }
+    if (member && member.toLowerCase() !== display.toLowerCase()) {
+      memberSets.get(key)!.add(member);
     }
     return bucket;
   };
@@ -141,6 +176,30 @@ export function buildSubstationBuckets(
     bucket.power.push(p);
   }
 
+  // Add every substation that metadata assigns to a group as a member of that
+  // group's bucket (so a group shows both names even if only one has records).
+  for (const m of metas) {
+    const display = (m.group || m.name || "").trim();
+    const key = display.toLowerCase();
+    const bucket = buckets.get(key);
+    if (!bucket || !m.name) continue;
+    if (m.name.trim().toLowerCase() !== key) memberSets.get(key)!.add(m.name.trim());
+  }
+
+  // Attach location/aka metadata and grouped member names.
+  for (const [key, bucket] of buckets.entries()) {
+    const members = Array.from(memberSets.get(key) ?? []).sort();
+    bucket.members = members;
+    // Prefer metadata matching the display name, else any member's metadata.
+    const selfMeta = metaByName.get(key);
+    const memberMeta = members
+      .map((m) => metaByName.get(m.toLowerCase()))
+      .find((m) => m && (m.location || m.aka));
+    const chosen = selfMeta ?? memberMeta;
+    if (chosen?.location) bucket.location = chosen.location;
+    if (chosen?.aka) bucket.aka = chosen.aka;
+  }
+
   for (const bucket of buckets.values()) {
     bucket.workedPct = bucket.parcels
       ? Math.round((bucket.worked / bucket.parcels) * 100)
@@ -158,10 +217,18 @@ export function buildSubstationBuckets(
 }
 
 /** Parcels belonging to a substation slug, as lightweight summaries. */
-export function parcelsForSlug(leads: Lead[], slug: string): ParcelSummary[] {
+export function parcelsForSlug(
+  leads: Lead[],
+  slug: string,
+  metas: SubstationMeta[] = []
+): ParcelSummary[] {
+  const metaByName = indexMeta(metas);
   return leads
     .map((lead) => ({ lead, meta: parseLeadMeta(lead.notes) }))
-    .filter(({ meta }) => (slugify(meta.substation) || "unassigned") === slug)
+    .filter(({ meta }) => {
+      const { display } = resolveDisplay(meta.substation, metaByName);
+      return (slugify(display) || "unassigned") === slug;
+    })
     .map(({ lead, meta }) => ({
       apn: lead.apn,
       propertyAddress: lead.propertyAddress,

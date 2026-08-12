@@ -49,6 +49,14 @@ function BucketCard({ bucket }: { bucket: SubstationBucket }) {
           <h3 className="mt-0.5 text-lg font-semibold tracking-tight text-slate-900">
             {bucket.name}
           </h3>
+          {bucket.location ? (
+            <p className="mt-0.5 text-xs text-slate-400">{bucket.location}</p>
+          ) : null}
+          {bucket.members.length > 1 ? (
+            <p className="mt-0.5 text-[11px] text-slate-400">
+              Group: {bucket.members.join(" + ")}
+            </p>
+          ) : null}
         </div>
         <ChevronRight className="h-5 w-5 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-500" />
       </div>
