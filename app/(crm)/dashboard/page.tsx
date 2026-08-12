@@ -14,6 +14,7 @@ export default async function DashboardPage() {
       initialMeta={meta}
       team={team.members}
       currentUserEmail={user.email}
+      currentUserName={user.fullName}
     />
   );
 }

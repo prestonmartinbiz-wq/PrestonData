@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   ArrowDownUp,
   Download,
+  Phone,
   Plus,
   RefreshCw,
   Search,
@@ -27,13 +28,37 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LeadForm, EMPTY_LEAD } from "@/components/crm/lead-form";
-import type { Lead, SaveMeta, TeamMember } from "@/lib/types";
+import { LogCallForm } from "@/components/crm/log-call-form";
+import { isNeverCalled, isOverdueCallback, outcomeLabel } from "@/lib/calls";
+import type { CallRecord, Lead, SaveMeta, TeamMember } from "@/lib/types";
 import { needsContact } from "@/lib/utils";
 
-type SortKey = "apn" | "propertyAddress" | "ownerEntity" | "status" | "assignedTo";
+type SortKey =
+  | "apn"
+  | "propertyAddress"
+  | "ownerEntity"
+  | "status"
+  | "assignedTo"
+  | "lastCalledAt"
+  | "nextCallbackAt"
+  | "callCount";
+
+type QueueFilter = "all" | "overdue" | "never_called";
 
 function csvEscape(value: string) {
   return '"' + (value || "").replace(/"/g, '""') + '"';
+}
+
+function formatShortDate(iso: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 export function LeadsDashboard({
@@ -41,24 +66,29 @@ export function LeadsDashboard({
   initialMeta,
   team,
   currentUserEmail,
+  currentUserName,
 }: {
   initialLeads: Lead[];
   initialMeta: SaveMeta;
   team: TeamMember[];
   currentUserEmail?: string;
+  currentUserName?: string;
 }) {
   const [leads, setLeads] = useState(initialLeads);
   const [meta, setMeta] = useState(initialMeta);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [assigneeFilter, setAssigneeFilter] = useState("all");
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
   const [needsContactOnly, setNeedsContactOnly] = useState(false);
   const [myLeadsOnly, setMyLeadsOnly] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("apn");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [selected, setSelected] = useState<Lead | null>(null);
   const [creating, setCreating] = useState(false);
+  const [loggingCall, setLoggingCall] = useState(false);
   const [draft, setDraft] = useState<Lead>(EMPTY_LEAD);
+  const [leadCalls, setLeadCalls] = useState<CallRecord[]>([]);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -95,6 +125,8 @@ export function LeadsDashboard({
       ) {
         return false;
       }
+      if (queueFilter === "overdue" && !isOverdueCallback(l)) return false;
+      if (queueFilter === "never_called" && !isNeverCalled(l)) return false;
       if (!q) return true;
       const hay = [
         l.apn,
@@ -106,6 +138,7 @@ export function LeadsDashboard({
         l.notes,
         l.status,
         l.assignedTo,
+        l.lastOutcome,
       ]
         .join(" ")
         .toLowerCase();
@@ -113,6 +146,20 @@ export function LeadsDashboard({
     });
 
     rows = [...rows].sort((a, b) => {
+      if (sortKey === "callCount") {
+        const av = Number(a.callCount || 0);
+        const bv = Number(b.callCount || 0);
+        if (av < bv) return sortDir === "asc" ? -1 : 1;
+        if (av > bv) return sortDir === "asc" ? 1 : -1;
+        return 0;
+      }
+      if (sortKey === "lastCalledAt" || sortKey === "nextCallbackAt") {
+        const av = Date.parse(a[sortKey] || "") || 0;
+        const bv = Date.parse(b[sortKey] || "") || 0;
+        if (av < bv) return sortDir === "asc" ? -1 : 1;
+        if (av > bv) return sortDir === "asc" ? 1 : -1;
+        return 0;
+      }
       const av = (a[sortKey] || "").toString().toLowerCase();
       const bv = (b[sortKey] || "").toString().toLowerCase();
       if (av < bv) return sortDir === "asc" ? -1 : 1;
@@ -125,6 +172,7 @@ export function LeadsDashboard({
     query,
     statusFilter,
     assigneeFilter,
+    queueFilter,
     needsContactOnly,
     myLeadsOnly,
     currentUserEmail,
@@ -149,6 +197,25 @@ export function LeadsDashboard({
     const data = await res.json();
     setLeads(data.leads);
     setMeta(data.meta);
+  }
+
+  async function loadCallsForApn(apn: string) {
+    try {
+      const res = await fetch("/api/calls?apn=" + encodeURIComponent(apn));
+      if (!res.ok) return;
+      const data = await res.json();
+      setLeadCalls(data.calls || []);
+    } catch {
+      setLeadCalls([]);
+    }
+  }
+
+  async function openLead(lead: Lead) {
+    setDraft(lead);
+    setSelected(lead);
+    setLoggingCall(false);
+    setLeadCalls([]);
+    await loadCallsForApn(lead.apn);
   }
 
   async function saveLead(mode: "create" | "edit") {
@@ -224,6 +291,11 @@ export function LeadsDashboard({
       "Notes",
       "Status",
       "Assigned To",
+      "Last Called At",
+      "Last Outcome",
+      "Next Callback At",
+      "Call Count",
+      "Needs Skip Trace",
     ];
     const lines = [
       headers.join(","),
@@ -243,6 +315,11 @@ export function LeadsDashboard({
           l.notes,
           l.status,
           l.assignedTo,
+          l.lastCalledAt || "",
+          l.lastOutcome || "",
+          l.nextCallbackAt || "",
+          l.callCount || "",
+          l.needsSkipTrace || "",
         ]
           .map(csvEscape)
           .join(",")
@@ -305,7 +382,7 @@ export function LeadsDashboard({
         </div>
       </div>
 
-      <div className="grid gap-2 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-6">
+      <div className="grid gap-2 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-7">
         <div className="relative md:col-span-2">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
           <Input
@@ -342,6 +419,19 @@ export function LeadsDashboard({
             ))}
           </SelectContent>
         </Select>
+        <Select
+          value={queueFilter}
+          onValueChange={(v) => setQueueFilter(v as QueueFilter)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Call queue" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All call states</SelectItem>
+            <SelectItem value="overdue">Overdue callback</SelectItem>
+            <SelectItem value="never_called">Never called</SelectItem>
+          </SelectContent>
+        </Select>
         <Button
           variant={needsContactOnly ? "default" : "outline"}
           onClick={() => setNeedsContactOnly((v) => !v)}
@@ -369,6 +459,9 @@ export function LeadsDashboard({
                     ["ownerEntity", "Owner"],
                     ["status", "Status"],
                     ["assignedTo", "Assigned"],
+                    ["lastCalledAt", "Last call"],
+                    ["nextCallbackAt", "Callback"],
+                    ["callCount", "Calls"],
                   ] as const
                 ).map(([key, label]) => (
                   <th key={key} className="px-3 py-2 font-medium">
@@ -385,40 +478,74 @@ export function LeadsDashboard({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((lead) => (
-                <tr
-                  key={lead.apn}
-                  className="cursor-pointer border-t border-slate-100 hover:bg-slate-50"
-                  onClick={() => {
-                    setDraft(lead);
-                    setSelected(lead);
-                  }}
-                >
-                  <td className="px-3 py-2 font-mono text-xs">{lead.apn}</td>
-                  <td className="max-w-[220px] truncate px-3 py-2">{lead.propertyAddress}</td>
-                  <td className="max-w-[180px] truncate px-3 py-2">{lead.ownerEntity}</td>
-                  <td className="px-3 py-2">
-                    <Badge>{lead.status || "—"}</Badge>
-                  </td>
-                  <td className="px-3 py-2 text-xs text-slate-600">
-                    {lead.assignedTo || "Unassigned"}
-                  </td>
-                  <td className="px-3 py-2">
-                    {needsContact(lead) ? (
-                      <Badge className="border-amber-200 bg-amber-50 text-amber-800">
-                        Needs info
-                      </Badge>
-                    ) : (
-                      <Badge className="border-emerald-200 bg-emerald-50 text-emerald-800">
-                        OK
-                      </Badge>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((lead) => {
+                const overdue = isOverdueCallback(lead);
+                const never = isNeverCalled(lead);
+                return (
+                  <tr
+                    key={lead.apn}
+                    className="cursor-pointer border-t border-slate-100 hover:bg-slate-50"
+                    onClick={() => openLead(lead)}
+                  >
+                    <td className="px-3 py-2 font-mono text-xs">{lead.apn}</td>
+                    <td className="max-w-[200px] truncate px-3 py-2">
+                      {lead.propertyAddress}
+                    </td>
+                    <td className="max-w-[160px] truncate px-3 py-2">
+                      {lead.ownerEntity}
+                    </td>
+                    <td className="px-3 py-2">
+                      <Badge>{lead.status || "—"}</Badge>
+                    </td>
+                    <td className="px-3 py-2 text-xs text-slate-600">
+                      {lead.assignedTo || "Unassigned"}
+                    </td>
+                    <td className="px-3 py-2 text-xs text-slate-600">
+                      {never ? (
+                        <Badge className="border-slate-200 bg-slate-50 text-slate-600">
+                          Never
+                        </Badge>
+                      ) : (
+                        <span title={outcomeLabel(lead.lastOutcome)}>
+                          {formatShortDate(lead.lastCalledAt)}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-xs">
+                      {lead.nextCallbackAt ? (
+                        <Badge
+                          className={
+                            overdue
+                              ? "border-rose-200 bg-rose-50 text-rose-800"
+                              : "border-sky-200 bg-sky-50 text-sky-800"
+                          }
+                        >
+                          {formatShortDate(lead.nextCallbackAt)}
+                        </Badge>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-xs text-slate-600">
+                      {lead.callCount || "0"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {needsContact(lead) ? (
+                        <Badge className="border-amber-200 bg-amber-50 text-amber-800">
+                          Needs info
+                        </Badge>
+                      ) : (
+                        <Badge className="border-emerald-200 bg-emerald-50 text-emerald-800">
+                          OK
+                        </Badge>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
               {!filtered.length ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-10 text-center text-slate-500">
+                  <td colSpan={9} className="px-3 py-10 text-center text-slate-500">
                     No leads match these filters.
                   </td>
                 </tr>
@@ -448,21 +575,85 @@ export function LeadsDashboard({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(selected)} onOpenChange={(o) => !o && setSelected(null)}>
+      <Dialog
+        open={Boolean(selected)}
+        onOpenChange={(o) => {
+          if (!o) {
+            setSelected(null);
+            setLoggingCall(false);
+            setLeadCalls([]);
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit lead {draft.apn}</DialogTitle>
+            <DialogTitle>
+              {loggingCall ? `Log call · ${draft.apn}` : `Edit lead ${draft.apn}`}
+            </DialogTitle>
           </DialogHeader>
-          <LeadForm
-            mode="edit"
-            lead={draft}
-            team={team}
-            currentUserEmail={currentUserEmail}
-            onChange={setDraft}
-            onSubmit={() => saveLead("edit")}
-            onDelete={deleteLead}
-            saving={saving}
-          />
+
+          {!loggingCall ? (
+            <>
+              <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-3">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setLoggingCall(true)}
+                >
+                  <Phone className="h-4 w-4" /> Log call
+                </Button>
+                {draft.callCount ? (
+                  <span className="text-xs text-slate-500">
+                    {draft.callCount} call{draft.callCount === "1" ? "" : "s"}
+                    {draft.lastCalledAt
+                      ? ` · last ${formatShortDate(draft.lastCalledAt)}`
+                      : ""}
+                    {draft.nextCallbackAt
+                      ? ` · callback ${formatShortDate(draft.nextCallbackAt)}`
+                      : ""}
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-500">No calls yet</span>
+                )}
+              </div>
+              <LeadForm
+                mode="edit"
+                lead={draft}
+                team={team}
+                currentUserEmail={currentUserEmail}
+                onChange={setDraft}
+                onSubmit={() => saveLead("edit")}
+                onDelete={deleteLead}
+                saving={saving}
+              />
+            </>
+          ) : (
+            <LogCallForm
+              lead={draft}
+              currentUserEmail={currentUserEmail}
+              currentUserName={currentUserName}
+              recentCalls={leadCalls}
+              onCancel={() => setLoggingCall(false)}
+              onLogged={({ call, leads: nextLeads, calls }) => {
+                setLeads(nextLeads);
+                const updated = nextLeads.find((l) => l.apn === draft.apn);
+                if (updated) {
+                  setDraft(updated);
+                  setSelected(updated);
+                }
+                setLeadCalls(
+                  [...calls]
+                    .filter((c) => c.apn === draft.apn)
+                    .sort(
+                      (a, b) =>
+                        (Date.parse(b.calledAt) || 0) - (Date.parse(a.calledAt) || 0)
+                    )
+                );
+                void call;
+                setLoggingCall(true);
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
