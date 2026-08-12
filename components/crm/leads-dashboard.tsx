@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import {
   ArrowDownUp,
   Download,
-  Phone,
   Plus,
   RefreshCw,
   Search,
@@ -28,10 +27,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LeadForm, EMPTY_LEAD } from "@/components/crm/lead-form";
-import { LogCallForm } from "@/components/crm/log-call-form";
+import { LeadDrawer } from "@/components/crm/lead-drawer";
 import { PropertyLinks } from "@/components/crm/property-links";
 import { isNeverCalled, isOverdueCallback, outcomeLabel } from "@/lib/calls";
-import type { CallRecord, Lead, SaveMeta, TeamMember } from "@/lib/types";
+import type { Lead, SaveMeta, TeamMember } from "@/lib/types";
 import { needsContact } from "@/lib/utils";
 
 type SortKey =
@@ -87,9 +86,7 @@ export function LeadsDashboard({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [selected, setSelected] = useState<Lead | null>(null);
   const [creating, setCreating] = useState(false);
-  const [loggingCall, setLoggingCall] = useState(false);
   const [draft, setDraft] = useState<Lead>(EMPTY_LEAD);
-  const [leadCalls, setLeadCalls] = useState<CallRecord[]>([]);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -200,30 +197,15 @@ export function LeadsDashboard({
     setMeta(data.meta);
   }
 
-  async function loadCallsForApn(apn: string) {
-    try {
-      const res = await fetch("/api/calls?apn=" + encodeURIComponent(apn));
-      if (!res.ok) return;
-      const data = await res.json();
-      setLeadCalls(data.calls || []);
-    } catch {
-      setLeadCalls([]);
-    }
-  }
-
-  async function openLead(lead: Lead) {
-    setDraft(lead);
+  function openLead(lead: Lead) {
     setSelected(lead);
-    setLoggingCall(false);
-    setLeadCalls([]);
-    await loadCallsForApn(lead.apn);
   }
 
-  async function saveLead(mode: "create" | "edit") {
+  async function createLead() {
     setSaving(true);
     try {
       const res = await fetch("/api/leads", {
-        method: mode === "create" ? "POST" : "PUT",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lead: draft }),
       });
@@ -232,61 +214,9 @@ export function LeadsDashboard({
       setLeads(data.leads);
       setMeta(data.meta);
       setCreating(false);
-      setSelected(null);
-      toast.success(mode === "create" ? "Lead added" : "Lead saved");
+      toast.success("Lead added");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function skipTrace() {
-    if (!draft.apn) return;
-    setSaving(true);
-    try {
-      const stamp = new Date().toISOString().slice(0, 10);
-      const updated = { ...draft, needsSkipTrace: `requested ${stamp}` };
-      const res = await fetch("/api/leads", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lead: updated }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Skip trace failed");
-      setLeads(data.leads);
-      setMeta(data.meta);
-      const fresh = (data.leads as Lead[]).find((l) => l.apn === updated.apn);
-      if (fresh) {
-        setDraft(fresh);
-        setSelected(fresh);
-      }
-      toast.success(
-        "Skip trace requested — contacts will be pulled from ZoomInfo (integration pending)"
-      );
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Skip trace failed");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function deleteLead() {
-    if (!draft.apn) return;
-    if (!confirm("Delete lead " + draft.apn + "?")) return;
-    setSaving(true);
-    try {
-      const res = await fetch("/api/leads?apn=" + encodeURIComponent(draft.apn), {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Delete failed");
-      setLeads(data.leads);
-      setMeta(data.meta);
-      setSelected(null);
-      toast.success("Lead deleted");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Delete failed");
     } finally {
       setSaving(false);
     }
@@ -617,118 +547,31 @@ export function LeadsDashboard({
             team={team}
             currentUserEmail={currentUserEmail}
             onChange={setDraft}
-            onSubmit={() => saveLead("create")}
+            onSubmit={createLead}
             saving={saving}
           />
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={Boolean(selected)}
-        onOpenChange={(o) => {
-          if (!o) {
+      {selected ? (
+        <LeadDrawer
+          key={selected.apn}
+          lead={selected}
+          team={team}
+          currentUserEmail={currentUserEmail}
+          currentUserName={currentUserName}
+          onClose={() => setSelected(null)}
+          onLeadsUpdated={(nextLeads, nextMeta) => {
+            setLeads(nextLeads);
+            if (nextMeta) setMeta(nextMeta);
+          }}
+          onDeleted={(_apn, nextLeads, nextMeta) => {
+            setLeads(nextLeads);
+            setMeta(nextMeta);
             setSelected(null);
-            setLoggingCall(false);
-            setLeadCalls([]);
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {loggingCall ? `Log call · ${draft.apn}` : `Edit lead ${draft.apn}`}
-            </DialogTitle>
-          </DialogHeader>
-
-          {!loggingCall ? (
-            <>
-              <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-3">
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setLoggingCall(true)}
-                >
-                  <Phone className="h-4 w-4" /> Log call
-                </Button>
-                {needsContact(draft) ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={skipTrace}
-                    disabled={saving}
-                    title="No contact info — pull from ZoomInfo (integration pending)"
-                  >
-                    <Search className="h-4 w-4" /> Skip trace
-                  </Button>
-                ) : null}
-                {draft.needsSkipTrace ? (
-                  <Badge className="border-violet-200 bg-violet-50 text-violet-700">
-                    Skip trace: {draft.needsSkipTrace}
-                  </Badge>
-                ) : null}
-                <PropertyLinks
-                  apn={draft.apn}
-                  propertyAddress={draft.propertyAddress}
-                  lat={draft.latitude}
-                  lng={draft.longitude}
-                />
-                {draft.callCount ? (
-                  <span className="text-xs text-slate-500">
-                    {draft.callCount} call{draft.callCount === "1" ? "" : "s"}
-                    {draft.lastCalledAt
-                      ? ` · last ${formatShortDate(draft.lastCalledAt)}`
-                      : ""}
-                    {draft.nextCallbackAt
-                      ? ` · callback ${formatShortDate(draft.nextCallbackAt)}`
-                      : ""}
-                  </span>
-                ) : (
-                  <span className="text-xs text-slate-500">No calls yet</span>
-                )}
-              </div>
-              <LeadForm
-                mode="edit"
-                lead={draft}
-                team={team}
-                currentUserEmail={currentUserEmail}
-                onChange={setDraft}
-                onSubmit={() => saveLead("edit")}
-                onDelete={deleteLead}
-                saving={saving}
-              />
-            </>
-          ) : (
-            <LogCallForm
-              lead={draft}
-              currentUserEmail={currentUserEmail}
-              currentUserName={currentUserName}
-              recentCalls={leadCalls}
-              onCancel={() => setLoggingCall(false)}
-              onLogged={({ call, leads: nextLeads, calls }) => {
-                if (nextLeads?.length) {
-                  setLeads(nextLeads);
-                  const updated = nextLeads.find((l) => l.apn === draft.apn);
-                  if (updated) {
-                    setDraft(updated);
-                    setSelected(updated);
-                  }
-                }
-                setLeadCalls(
-                  [...calls]
-                    .filter((c) => c.apn === draft.apn)
-                    .sort(
-                      (a, b) =>
-                        (Date.parse(b.calledAt) || 0) - (Date.parse(a.calledAt) || 0)
-                    )
-                );
-                void call;
-                setLoggingCall(true);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+          }}
+        />
+      ) : null}
     </div>
   );
 }

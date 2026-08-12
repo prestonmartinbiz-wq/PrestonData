@@ -216,6 +216,19 @@ export function buildSubstationBuckets(
   });
 }
 
+/** Full leads belonging to a substation slug (grouping-aware). */
+export function leadsForSlug(
+  leads: Lead[],
+  slug: string,
+  metas: SubstationMeta[] = []
+): Lead[] {
+  const metaByName = indexMeta(metas);
+  return leads.filter((lead) => {
+    const { display } = resolveDisplay(parseLeadMeta(lead.notes).substation, metaByName);
+    return (slugify(display) || "unassigned") === slug;
+  });
+}
+
 /** Parcels belonging to a substation slug, as lightweight summaries. */
 export function parcelsForSlug(
   leads: Lead[],

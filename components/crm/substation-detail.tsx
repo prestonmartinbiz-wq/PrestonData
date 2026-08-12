@@ -9,8 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CrexiUpload } from "@/components/crm/crexi-upload";
 import { PowerForm } from "@/components/crm/power-form";
-import type { PowerAvailability } from "@/lib/types";
-import type { ParcelSummary, SubstationBucket } from "@/lib/substation";
+import { LeadDrawer } from "@/components/crm/lead-drawer";
+import type { Lead, PowerAvailability, TeamMember } from "@/lib/types";
+import { parseLeadMeta, type SubstationBucket } from "@/lib/substation";
+import { getPhones } from "@/lib/phones";
+import { needsContact } from "@/lib/utils";
 
 function fmtMva(mva: number | null): string {
   return mva === null ? "—" : `${mva} MVA`;
@@ -112,15 +115,23 @@ function PowerCard({
 
 export function SubstationDetail({
   bucket,
-  parcels,
+  leads: initialLeads,
   power,
+  team,
+  currentUserEmail,
+  currentUserName,
 }: {
   bucket: SubstationBucket;
-  parcels: ParcelSummary[];
+  leads: Lead[];
   power: PowerAvailability[];
+  team: TeamMember[];
+  currentUserEmail?: string;
+  currentUserName?: string;
 }) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [leads, setLeads] = useState<Lead[]>(initialLeads);
+  const [selected, setSelected] = useState<Lead | null>(null);
 
   async function deletePower(id: string) {
     if (!confirm("Remove this power-availability record?")) return;
@@ -217,7 +228,10 @@ export function SubstationDetail({
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Parcels <span className="text-slate-400">({parcels.length})</span>
+          Parcels <span className="text-slate-400">({leads.length})</span>
+          <span className="ml-2 font-normal normal-case text-slate-400">
+            — click a row to view the owner, edit phones, or run skip trace
+          </span>
         </h2>
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
@@ -227,44 +241,67 @@ export function SubstationDetail({
                   <th className="px-3 py-2 font-medium">APN</th>
                   <th className="px-3 py-2 font-medium">Address</th>
                   <th className="px-3 py-2 font-medium">Owner</th>
+                  <th className="px-3 py-2 font-medium">Phone</th>
                   <th className="px-3 py-2 font-medium">Type</th>
-                  <th className="px-3 py-2 font-medium">Acres</th>
                   <th className="px-3 py-2 font-medium">Status</th>
                   <th className="px-3 py-2 font-medium">Contact</th>
                 </tr>
               </thead>
               <tbody>
-                {parcels.map((p) => (
-                  <tr key={p.apn} className="border-t border-slate-100">
-                    <td className="px-3 py-2 font-mono text-xs">{p.apn}</td>
-                    <td className="max-w-[220px] truncate px-3 py-2">
-                      {p.propertyAddress}
-                    </td>
-                    <td className="max-w-[180px] truncate px-3 py-2">{p.ownerEntity}</td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{p.type || "—"}</td>
-                    <td className="px-3 py-2 text-xs tabular-nums text-slate-600">
-                      {p.acres !== null ? p.acres.toFixed(2) : "—"}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Badge>{p.status || "—"}</Badge>
-                    </td>
-                    <td className="px-3 py-2">
-                      {p.needsContact ? (
-                        <Badge className="border-amber-200 bg-amber-50 text-amber-800">
-                          Needs info
-                        </Badge>
-                      ) : (
-                        <Badge className="border-emerald-200 bg-emerald-50 text-emerald-800">
-                          OK
-                        </Badge>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {!parcels.length ? (
+                {leads.map((lead) => {
+                  const meta = parseLeadMeta(lead.notes);
+                  const phones = getPhones(lead);
+                  return (
+                    <tr
+                      key={lead.apn}
+                      className="cursor-pointer border-t border-slate-100 hover:bg-slate-50"
+                      onClick={() => setSelected(lead)}
+                    >
+                      <td className="px-3 py-2 font-mono text-xs">{lead.apn}</td>
+                      <td className="max-w-[220px] truncate px-3 py-2">
+                        {lead.propertyAddress}
+                      </td>
+                      <td className="max-w-[180px] truncate px-3 py-2">
+                        {lead.ownerEntity || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-slate-600">
+                        {phones.length ? (
+                          <span>
+                            {phones[0]}
+                            {phones.length > 1 ? (
+                              <span className="text-slate-400"> +{phones.length - 1}</span>
+                            ) : null}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-slate-600">
+                        {meta.type || "—"}
+                      </td>
+                      <td className="px-3 py-2">
+                        <Badge>{lead.status || "—"}</Badge>
+                      </td>
+                      <td className="px-3 py-2">
+                        {needsContact(lead) ? (
+                          <Badge className="border-amber-200 bg-amber-50 text-amber-800">
+                            Needs info
+                          </Badge>
+                        ) : (
+                          <Badge className="border-emerald-200 bg-emerald-50 text-emerald-800">
+                            OK
+                          </Badge>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!leads.length ? (
                   <tr>
                     <td colSpan={7} className="px-3 py-10 text-center text-slate-500">
-                      No parcels in this substation yet.
+                      No parcels in this substation yet. Use{" "}
+                      <span className="font-medium">Upload Crexi export</span> above to add
+                      them.
                     </td>
                   </tr>
                 ) : null}
@@ -273,6 +310,24 @@ export function SubstationDetail({
           </div>
         </div>
       </section>
+
+      {selected ? (
+        <LeadDrawer
+          key={selected.apn}
+          lead={selected}
+          team={team}
+          currentUserEmail={currentUserEmail}
+          currentUserName={currentUserName}
+          onClose={() => setSelected(null)}
+          onLeadsUpdated={(all) =>
+            setLeads((prev) => prev.map((l) => all.find((x) => x.apn === l.apn) || l))
+          }
+          onDeleted={(apn) => {
+            setLeads((prev) => prev.filter((l) => l.apn !== apn));
+            setSelected(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
