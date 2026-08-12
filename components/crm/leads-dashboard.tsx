@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   ArrowDownUp,
@@ -27,7 +28,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LeadForm, EMPTY_LEAD } from "@/components/crm/lead-form";
-import { LeadDrawer } from "@/components/crm/lead-drawer";
 import { PropertyLinks } from "@/components/crm/property-links";
 import { isNeverCalled, isOverdueCallback, outcomeLabel } from "@/lib/calls";
 import type { Lead, SaveMeta, TeamMember } from "@/lib/types";
@@ -66,7 +66,6 @@ export function LeadsDashboard({
   initialMeta,
   team,
   currentUserEmail,
-  currentUserName,
 }: {
   initialLeads: Lead[];
   initialMeta: SaveMeta;
@@ -84,7 +83,7 @@ export function LeadsDashboard({
   const [myLeadsOnly, setMyLeadsOnly] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("apn");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [selected, setSelected] = useState<Lead | null>(null);
+  const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState<Lead>(EMPTY_LEAD);
   const [saving, setSaving] = useState(false);
@@ -198,7 +197,7 @@ export function LeadsDashboard({
   }
 
   function openLead(lead: Lead) {
-    setSelected(lead);
+    router.push("/lead/" + encodeURIComponent(lead.apn));
   }
 
   async function createLead() {
@@ -553,25 +552,6 @@ export function LeadsDashboard({
         </DialogContent>
       </Dialog>
 
-      {selected ? (
-        <LeadDrawer
-          key={selected.apn}
-          lead={selected}
-          team={team}
-          currentUserEmail={currentUserEmail}
-          currentUserName={currentUserName}
-          onClose={() => setSelected(null)}
-          onLeadsUpdated={(nextLeads, nextMeta) => {
-            setLeads(nextLeads);
-            if (nextMeta) setMeta(nextMeta);
-          }}
-          onDeleted={(_apn, nextLeads, nextMeta) => {
-            setLeads(nextLeads);
-            setMeta(nextMeta);
-            setSelected(null);
-          }}
-        />
-      ) : null}
     </div>
   );
 }

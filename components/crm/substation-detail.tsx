@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CrexiUpload } from "@/components/crm/crexi-upload";
 import { PowerForm } from "@/components/crm/power-form";
-import { LeadDrawer } from "@/components/crm/lead-drawer";
 import type { Lead, PowerAvailability, TeamMember } from "@/lib/types";
 import { parseLeadMeta, type SubstationBucket } from "@/lib/substation";
 import { getPhones } from "@/lib/phones";
@@ -115,23 +114,18 @@ function PowerCard({
 
 export function SubstationDetail({
   bucket,
-  leads: initialLeads,
+  leads,
   power,
-  team,
-  currentUserEmail,
-  currentUserName,
 }: {
   bucket: SubstationBucket;
   leads: Lead[];
   power: PowerAvailability[];
-  team: TeamMember[];
+  team?: TeamMember[];
   currentUserEmail?: string;
   currentUserName?: string;
 }) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [leads, setLeads] = useState<Lead[]>(initialLeads);
-  const [selected, setSelected] = useState<Lead | null>(null);
 
   async function deletePower(id: string) {
     if (!confirm("Remove this power-availability record?")) return;
@@ -255,7 +249,7 @@ export function SubstationDetail({
                     <tr
                       key={lead.apn}
                       className="cursor-pointer border-t border-slate-100 hover:bg-slate-50"
-                      onClick={() => setSelected(lead)}
+                      onClick={() => router.push("/lead/" + encodeURIComponent(lead.apn))}
                     >
                       <td className="px-3 py-2 font-mono text-xs">{lead.apn}</td>
                       <td className="max-w-[220px] truncate px-3 py-2">
@@ -311,23 +305,6 @@ export function SubstationDetail({
         </div>
       </section>
 
-      {selected ? (
-        <LeadDrawer
-          key={selected.apn}
-          lead={selected}
-          team={team}
-          currentUserEmail={currentUserEmail}
-          currentUserName={currentUserName}
-          onClose={() => setSelected(null)}
-          onLeadsUpdated={(all) =>
-            setLeads((prev) => prev.map((l) => all.find((x) => x.apn === l.apn) || l))
-          }
-          onDeleted={(apn) => {
-            setLeads((prev) => prev.filter((l) => l.apn !== apn));
-            setSelected(null);
-          }}
-        />
-      ) : null}
     </div>
   );
 }

@@ -144,6 +144,31 @@ export type SubstationsData = {
   items: SubstationMeta[];
 };
 
+/** A follow-up task / "remind me to call" pinned to a user's task list. */
+export type Task = {
+  id: string;
+  /** Related parcel APN (optional but usually set). */
+  apn: string;
+  /** Property address snapshot for display. */
+  propertyAddress: string;
+  /** Short title, e.g. "Call owner". */
+  title: string;
+  /** Optional note. */
+  note: string;
+  /** ISO datetime the task is due. */
+  dueAt: string;
+  /** User email this task is assigned to. */
+  assignedTo: string;
+  status: "open" | "done";
+  createdBy: string;
+  createdAt: string;
+  completedAt: string;
+};
+
+export type TasksData = {
+  items: Task[];
+};
+
 export type TeamData = {
   members: TeamMember[];
 };
