@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { LeadForm, EMPTY_LEAD } from "@/components/crm/lead-form";
 import { LogCallForm } from "@/components/crm/log-call-form";
+import { PropertyLinks } from "@/components/crm/property-links";
 import { isNeverCalled, isOverdueCallback, outcomeLabel } from "@/lib/calls";
 import type { CallRecord, Lead, SaveMeta, TeamMember } from "@/lib/types";
 import { needsContact } from "@/lib/utils";
@@ -487,7 +488,16 @@ export function LeadsDashboard({
                     className="cursor-pointer border-t border-slate-100 hover:bg-slate-50"
                     onClick={() => openLead(lead)}
                   >
-                    <td className="px-3 py-2 font-mono text-xs">{lead.apn}</td>
+                    <td className="px-3 py-2 font-mono text-xs">
+                      <div className="flex flex-col gap-0.5">
+                        <span>{lead.apn}</span>
+                        <PropertyLinks
+                          apn={lead.apn}
+                          propertyAddress={lead.propertyAddress}
+                          compact
+                        />
+                      </div>
+                    </td>
                     <td className="max-w-[200px] truncate px-3 py-2">
                       {lead.propertyAddress}
                     </td>
@@ -602,6 +612,10 @@ export function LeadsDashboard({
                 >
                   <Phone className="h-4 w-4" /> Log call
                 </Button>
+                <PropertyLinks
+                  apn={draft.apn}
+                  propertyAddress={draft.propertyAddress}
+                />
                 {draft.callCount ? (
                   <span className="text-xs text-slate-500">
                     {draft.callCount} call{draft.callCount === "1" ? "" : "s"}

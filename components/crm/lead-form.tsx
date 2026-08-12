@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PropertyLinks } from "@/components/crm/property-links";
 
 const fields: { key: keyof Lead; label: string; multiline?: boolean }[] = [
   { key: "apn", label: "APN" },
@@ -64,7 +65,15 @@ export function LeadForm({
       <div className="grid gap-3">
         {fields.map((f) => (
           <div key={f.key} className="space-y-1.5">
-            <Label htmlFor={f.key}>{f.label}</Label>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Label htmlFor={f.key}>{f.label}</Label>
+              {f.key === "apn" ? (
+                <PropertyLinks
+                  apn={lead.apn}
+                  propertyAddress={lead.propertyAddress}
+                />
+              ) : null}
+            </div>
             {f.multiline ? (
               <Textarea
                 id={f.key}
