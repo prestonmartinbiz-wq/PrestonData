@@ -47,6 +47,10 @@ export function parseLeadsCsv(csvText: string): Lead[] {
       lead.needsSkipTrace =
         lead.needsSkipTrace ||
         pick(row, ["needsSkipTrace", "NeedsSkipTrace", "needs_skip_trace"]);
+      lead.latitude =
+        lead.latitude || pick(row, ["latitude", "lat", "Lat"]);
+      lead.longitude =
+        lead.longitude || pick(row, ["longitude", "lng", "lon", "Long", "long"]);
       return lead;
     })
     .filter((l) => normalizeApn(l.apn));
@@ -68,6 +72,8 @@ export function leadsToCsv(leads: Lead[]): string {
     Notes: lead.notes,
     Status: lead.status,
     "Assigned To": lead.assignedTo,
+    Latitude: lead.latitude || "",
+    Longitude: lead.longitude || "",
     "Last Called At": lead.lastCalledAt || "",
     "Last Outcome": lead.lastOutcome || "",
     "Next Callback At": lead.nextCallbackAt || "",

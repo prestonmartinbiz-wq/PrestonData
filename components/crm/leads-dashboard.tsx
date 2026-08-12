@@ -292,6 +292,8 @@ export function LeadsDashboard({
       "Notes",
       "Status",
       "Assigned To",
+      "Latitude",
+      "Longitude",
       "Last Called At",
       "Last Outcome",
       "Next Callback At",
@@ -316,6 +318,8 @@ export function LeadsDashboard({
           l.notes,
           l.status,
           l.assignedTo,
+          l.latitude || "",
+          l.longitude || "",
           l.lastCalledAt || "",
           l.lastOutcome || "",
           l.nextCallbackAt || "",
@@ -494,6 +498,8 @@ export function LeadsDashboard({
                         <PropertyLinks
                           apn={lead.apn}
                           propertyAddress={lead.propertyAddress}
+                          lat={lead.latitude}
+                          lng={lead.longitude}
                           compact
                         />
                       </div>
@@ -615,6 +621,8 @@ export function LeadsDashboard({
                 <PropertyLinks
                   apn={draft.apn}
                   propertyAddress={draft.propertyAddress}
+                  lat={draft.latitude}
+                  lng={draft.longitude}
                 />
                 {draft.callCount ? (
                   <span className="text-xs text-slate-500">

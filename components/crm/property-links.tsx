@@ -12,6 +12,8 @@ type PropertyLinksProps = {
   propertyAddress?: string;
   lat?: string | number;
   lng?: string | number;
+  easting?: string | number;
+  northing?: string | number;
   className?: string;
   /** Compact row style for table cells */
   compact?: boolean;
@@ -25,10 +27,12 @@ export function PropertyLinks({
   propertyAddress = "",
   lat,
   lng,
+  easting,
+  northing,
   className,
   compact = false,
 }: PropertyLinksProps) {
-  const gismo = clarkGismoUrl(apn);
+  const gismo = clarkGismoUrl(apn, { lat, lng, easting, northing });
   const assessor = clarkAssessorUrl(apn);
   const maps = googleMapsUrl(propertyAddress, { lat, lng });
 

@@ -71,6 +71,8 @@ export function LeadForm({
                 <PropertyLinks
                   apn={lead.apn}
                   propertyAddress={lead.propertyAddress}
+                  lat={lead.latitude}
+                  lng={lead.longitude}
                 />
               ) : null}
             </div>
