@@ -241,6 +241,36 @@ export function LeadsDashboard({
     }
   }
 
+  async function skipTrace() {
+    if (!draft.apn) return;
+    setSaving(true);
+    try {
+      const stamp = new Date().toISOString().slice(0, 10);
+      const updated = { ...draft, needsSkipTrace: `requested ${stamp}` };
+      const res = await fetch("/api/leads", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lead: updated }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Skip trace failed");
+      setLeads(data.leads);
+      setMeta(data.meta);
+      const fresh = (data.leads as Lead[]).find((l) => l.apn === updated.apn);
+      if (fresh) {
+        setDraft(fresh);
+        setSelected(fresh);
+      }
+      toast.success(
+        "Skip trace requested — contacts will be pulled from ZoomInfo (integration pending)"
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Skip trace failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function deleteLead() {
     if (!draft.apn) return;
     if (!confirm("Delete lead " + draft.apn + "?")) return;
@@ -286,6 +316,7 @@ export function LeadsDashboard({
       "Phone",
       "Email",
       "Alt Phone",
+      "Phones",
       "Mailing / RA Address",
       "Confidence",
       "Sources",
@@ -312,6 +343,7 @@ export function LeadsDashboard({
           l.phone,
           l.email,
           l.altPhone,
+          l.phones || [l.phone, l.altPhone].filter(Boolean).join("|"),
           l.mailingAddress,
           l.confidence,
           l.sources,
@@ -618,6 +650,23 @@ export function LeadsDashboard({
                 >
                   <Phone className="h-4 w-4" /> Log call
                 </Button>
+                {needsContact(draft) ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={skipTrace}
+                    disabled={saving}
+                    title="No contact info — pull from ZoomInfo (integration pending)"
+                  >
+                    <Search className="h-4 w-4" /> Skip trace
+                  </Button>
+                ) : null}
+                {draft.needsSkipTrace ? (
+                  <Badge className="border-violet-200 bg-violet-50 text-violet-700">
+                    Skip trace: {draft.needsSkipTrace}
+                  </Badge>
+                ) : null}
                 <PropertyLinks
                   apn={draft.apn}
                   propertyAddress={draft.propertyAddress}

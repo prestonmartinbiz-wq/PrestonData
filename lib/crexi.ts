@@ -74,7 +74,10 @@ export function parseCrexiCsv(csvText: string, substation: string): Lead[] {
       const apn = normalizeApn(get(row, "APN"));
       if (!apn) return null;
 
-      const phone = get(row, "Phone 1");
+      const phoneList = ["Phone 1", "Phone 2", "Phone 3", "Phone 4", "Phone 5"]
+        .map((k) => get(row, k))
+        .filter(Boolean);
+      const phone = phoneList[0] || "";
       const email = get(row, "Email 1");
       const hasContact = Boolean(phone || email);
 
@@ -87,7 +90,8 @@ export function parseCrexiCsv(csvText: string, substation: string): Lead[] {
         title: "",
         phone,
         email,
-        altPhone: get(row, "Phone 2"),
+        altPhone: phoneList[1] || "",
+        phones: phoneList.join("|"),
         mailingAddress: buildMailing(row),
         confidence: "",
         sources: joinParts(["Crexi export", get(row, "Property Link")], " · "),

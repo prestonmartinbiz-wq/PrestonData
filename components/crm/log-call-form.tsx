@@ -113,8 +113,11 @@ export function LogCallForm({
   const [caller, setCaller] = useState(defaultCaller);
   const [durationSec, setDurationSec] = useState("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [transcriptText, setTranscriptText] = useState("");
   const [phase, setPhase] = useState<"idle" | "saving" | "uploading" | "transcribing">("idle");
   const [expandedTranscript, setExpandedTranscript] = useState<string | null>(null);
+  const [transcriptEditId, setTranscriptEditId] = useState<string | null>(null);
+  const [transcriptDraft, setTranscriptDraft] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const showCallback = CALLBACK_OUTCOMES.has(outcome) || outcome === "callback_set";
@@ -209,11 +212,57 @@ export function LogCallForm({
         toast.success("Call logged");
       }
 
+      if (transcriptText.trim()) {
+        const result = await postTranscript(call.callId, transcriptText);
+        if (result) {
+          call = result.call;
+          calls = result.calls;
+          toast.success("Transcript saved");
+        }
+      }
+
       onLogged({ call, leads, calls });
       setAudioFile(null);
+      setTranscriptText("");
       if (fileRef.current) fileRef.current.value = "";
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to log call");
+    } finally {
+      setPhase("idle");
+    }
+  }
+
+  async function postTranscript(
+    callId: string,
+    text: string
+  ): Promise<{ call: CallRecord; calls: CallRecord[] } | null> {
+    const res = await fetch(`/api/calls/${encodeURIComponent(callId)}/transcript`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transcript: text }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error || "Transcript save failed");
+      return null;
+    }
+    return { call: data.call, calls: data.calls };
+  }
+
+  async function saveTranscriptForExisting(callId: string) {
+    if (!transcriptDraft.trim()) {
+      toast.error("Paste transcript text first");
+      return;
+    }
+    setPhase("saving");
+    try {
+      const result = await postTranscript(callId, transcriptDraft);
+      if (result) {
+        toast.success("Transcript saved");
+        setTranscriptEditId(null);
+        setTranscriptDraft("");
+        onLogged({ call: result.call, calls: result.calls });
+      }
     } finally {
       setPhase("idle");
     }
@@ -372,7 +421,7 @@ export function LogCallForm({
             />
           </div>
           <p className="text-xs text-slate-500">
-            mp3, m4a, wav, webm, ogg · max{" "}
+            mp3, m4a, mp4, wav, webm, ogg · max{" "}
             {Math.round(MAX_CALL_AUDIO_BYTES / (1024 * 1024))}MB. Transcribed with
             Whisper when OPENAI_API_KEY is set.
           </p>
@@ -394,6 +443,38 @@ export function LogCallForm({
               </button>
             </div>
           ) : null}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="callTranscript">Transcript (optional)</Label>
+          <Textarea
+            id="callTranscript"
+            value={transcriptText}
+            onChange={(e) => setTranscriptText(e.target.value)}
+            placeholder="Paste the call transcript here, or upload a .txt file below…"
+            rows={3}
+            disabled={busy}
+          />
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <label className="inline-flex cursor-pointer items-center gap-1 text-slate-600 underline">
+              <Upload className="h-3 w-3" /> Upload .txt
+              <input
+                type="file"
+                accept=".txt,text/plain"
+                className="hidden"
+                disabled={busy}
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (f) setTranscriptText(await f.text());
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            <span>
+              Attach a transcript directly (no audio needed). Works even without
+              OPENAI_API_KEY.
+            </span>
+          </div>
         </div>
       </div>
 
@@ -457,7 +538,42 @@ export function LogCallForm({
                     </label>
                   )}
                   {transcriptBadge(c.transcriptStatus || "")}
+                  {!c.transcript ? (
+                    <button
+                      type="button"
+                      className="text-slate-600 underline"
+                      disabled={busy}
+                      onClick={() => {
+                        setTranscriptEditId((id) =>
+                          id === c.callId ? null : c.callId
+                        );
+                        setTranscriptDraft("");
+                      }}
+                    >
+                      {transcriptEditId === c.callId ? "Cancel" : "Add transcript"}
+                    </button>
+                  ) : null}
                 </div>
+                {transcriptEditId === c.callId ? (
+                  <div className="mt-2 space-y-1">
+                    <Textarea
+                      rows={3}
+                      value={transcriptDraft}
+                      onChange={(e) => setTranscriptDraft(e.target.value)}
+                      placeholder="Paste the call transcript…"
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => saveTranscriptForExisting(c.callId)}
+                        disabled={busy}
+                      >
+                        Save transcript
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
                 {c.transcriptSummary ? (
                   <p className="mt-1 text-slate-600">{c.transcriptSummary}</p>
                 ) : null}

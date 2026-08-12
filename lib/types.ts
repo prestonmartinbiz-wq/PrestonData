@@ -7,6 +7,8 @@ export type Lead = {
   phone: string;
   email: string;
   altPhone: string;
+  /** Pipe-delimited list of all phone numbers (source of truth for the phone editor). */
+  phones: string;
   mailingAddress: string;
   confidence: string;
   sources: string;
@@ -164,6 +166,7 @@ export const LEAD_CSV_HEADERS = [
   "Phone",
   "Email",
   "Alt Phone",
+  "Phones",
   "Mailing / RA Address",
   "Confidence",
   "Sources",
@@ -188,6 +191,7 @@ export const LEAD_FIELD_BY_HEADER: Record<string, keyof Lead> = {
   Phone: "phone",
   Email: "email",
   "Alt Phone": "altPhone",
+  Phones: "phones",
   "Mailing / RA Address": "mailingAddress",
   Confidence: "confidence",
   Sources: "sources",
@@ -212,6 +216,7 @@ export const EMPTY_LEAD: Lead = {
   phone: "",
   email: "",
   altPhone: "",
+  phones: "",
   mailingAddress: "",
   confidence: "",
   sources: "",

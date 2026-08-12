@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { Trash2 } from "lucide-react";
 import { EMPTY_LEAD, LEAD_STATUSES, type Lead, type TeamMember } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PropertyLinks } from "@/components/crm/property-links";
+import { getPhones, withPhones } from "@/lib/phones";
 
 const fields: { key: keyof Lead; label: string; multiline?: boolean }[] = [
   { key: "apn", label: "APN" },
@@ -20,14 +23,77 @@ const fields: { key: keyof Lead; label: string; multiline?: boolean }[] = [
   { key: "ownerEntity", label: "Owner Entity" },
   { key: "decisionMaker", label: "Decision Maker" },
   { key: "title", label: "Title" },
-  { key: "phone", label: "Phone" },
   { key: "email", label: "Email" },
-  { key: "altPhone", label: "Alt Phone" },
   { key: "mailingAddress", label: "Mailing / RA Address", multiline: true },
   { key: "confidence", label: "Confidence" },
   { key: "sources", label: "Sources", multiline: true },
   { key: "notes", label: "Notes", multiline: true },
 ];
+
+function PhoneEditor({
+  lead,
+  onChange,
+}: {
+  lead: Lead;
+  onChange: (lead: Lead) => void;
+}) {
+  const phones = getPhones(lead);
+  const [newPhone, setNewPhone] = useState("");
+
+  const addPhone = () => {
+    if (!newPhone.trim()) return;
+    onChange(withPhones(lead, [...phones, newPhone]));
+    setNewPhone("");
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <Label>Phone numbers</Label>
+      <div className="space-y-2">
+        {phones.map((p, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Input
+              value={p}
+              onChange={(e) => {
+                const next = [...phones];
+                next[i] = e.target.value;
+                onChange(withPhones(lead, next));
+              }}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title="Remove (doesn't work)"
+              onClick={() => onChange(withPhones(lead, phones.filter((_, j) => j !== i)))}
+            >
+              <Trash2 className="h-4 w-4 text-slate-400" />
+            </Button>
+          </div>
+        ))}
+        {!phones.length ? (
+          <p className="text-xs text-slate-400">No phone numbers on file.</p>
+        ) : null}
+        <div className="flex items-center gap-2">
+          <Input
+            value={newPhone}
+            placeholder="Add another phone number"
+            onChange={(e) => setNewPhone(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addPhone();
+              }
+            }}
+          />
+          <Button type="button" variant="outline" onClick={addPhone}>
+            Add
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function LeadForm({
   lead,
@@ -94,6 +160,8 @@ export function LeadForm({
             )}
           </div>
         ))}
+
+        <PhoneEditor lead={lead} onChange={onChange} />
 
         <div className="space-y-1.5">
           <Label>Status</Label>
