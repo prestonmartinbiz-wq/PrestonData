@@ -13,6 +13,10 @@ export type Lead = {
   notes: string;
   status: string;
   assignedTo: string;
+  /** Optional WGS84 latitude from enrichment; empty when unknown */
+  latitude: string;
+  /** Optional WGS84 longitude from enrichment; empty when unknown */
+  longitude: string;
   /** ISO datetime of most recent call (rollup from calls.csv) */
   lastCalledAt: string;
   /** Outcome of most recent call */
@@ -96,6 +100,8 @@ export const LEAD_CSV_HEADERS = [
   "Notes",
   "Status",
   "Assigned To",
+  "Latitude",
+  "Longitude",
   "Last Called At",
   "Last Outcome",
   "Next Callback At",
@@ -118,6 +124,8 @@ export const LEAD_FIELD_BY_HEADER: Record<string, keyof Lead> = {
   Notes: "notes",
   Status: "status",
   "Assigned To": "assignedTo",
+  Latitude: "latitude",
+  Longitude: "longitude",
   "Last Called At": "lastCalledAt",
   "Last Outcome": "lastOutcome",
   "Next Callback At": "nextCallbackAt",
@@ -140,6 +148,8 @@ export const EMPTY_LEAD: Lead = {
   notes: "",
   status: "New",
   assignedTo: "",
+  latitude: "",
+  longitude: "",
   lastCalledAt: "",
   lastOutcome: "",
   nextCallbackAt: "",
