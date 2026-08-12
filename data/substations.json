@@ -1,0 +1,64 @@
+{
+  "items": [
+    {
+      "name": "Highland",
+      "group": "Highland / El Rancho",
+      "location": "Serves 2635 Highland Dr, Las Vegas (near the Strip / I-15)",
+      "notes": "Grouped with El Rancho: the 2635 Highland Dr project is fed jointly by El Rancho (ER-1211) and Highland (HI-1228/HI-1128) feeders."
+    },
+    {
+      "name": "El Rancho",
+      "group": "Highland / El Rancho",
+      "aka": "El Rancho (ER-1211 feeder)",
+      "location": "Serves 2635 Highland Dr, Las Vegas (near the Strip / I-15)"
+    },
+    {
+      "name": "Polaris",
+      "location": "Serves 4424 Polaris Ave, Las Vegas (southeast valley)"
+    },
+    {
+      "name": "Procyon",
+      "location": "Serves Trop & Koval area, Las Vegas (southwest) — planned bus/bank"
+    },
+    {
+      "name": "Tonopah",
+      "location": "Serves 4150 Smoke Ranch Rd, Las Vegas (northwest)"
+    },
+    {
+      "name": "Commerce",
+      "location": "Serves 1201 S Casino Center Blvd, downtown Las Vegas"
+    },
+    {
+      "name": "Swenson",
+      "location": "Serves Convention Center Dr, Las Vegas (Paradise / LVCC)"
+    },
+    {
+      "name": "Larson",
+      "location": "Serves Volunteer & Gillespie, Henderson"
+    },
+    {
+      "name": "Lincoln",
+      "location": "Serves North Las Vegas (LM Construction sites) — planned bank"
+    },
+    {
+      "name": "Brooks",
+      "location": "Serves 1011 E Alexander Rd, North Las Vegas — planned substation (ISD ~2031)"
+    },
+    {
+      "name": "Craig",
+      "location": "Serves 4740 Losee Rd, North Las Vegas"
+    },
+    {
+      "name": "Gilmore",
+      "location": "Serves 1011 E Alexander Rd, North Las Vegas"
+    },
+    {
+      "name": "Alta",
+      "location": "Serves 740 MLK Blvd, Las Vegas"
+    },
+    {
+      "name": "Faulkner",
+      "location": "Serves central Las Vegas"
+    }
+  ]
+}
