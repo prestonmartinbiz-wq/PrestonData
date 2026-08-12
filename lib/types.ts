@@ -40,6 +40,8 @@ export type CallOutcome =
   | "interested"
   | "dnc";
 
+export type TranscriptStatus = "pending" | "ready" | "failed" | "skipped" | "";
+
 export type CallRecord = {
   callId: string;
   apn: string;
@@ -52,6 +54,13 @@ export type CallRecord = {
   notes: string;
   durationSec: string;
   source: string;
+  /** Authenticated app URL to stream audio, e.g. /api/calls/{id}/audio */
+  audioUrl: string;
+  /** Storage locator: local:call-audio/... or blob:... */
+  audioPath: string;
+  transcript: string;
+  transcriptStatus: TranscriptStatus | string;
+  transcriptSummary: string;
 };
 
 export type TeamMember = {
@@ -162,6 +171,11 @@ export const CALL_CSV_HEADERS = [
   "Notes",
   "Duration Sec",
   "Source",
+  "Audio URL",
+  "Audio Path",
+  "Transcript",
+  "Transcript Status",
+  "Transcript Summary",
 ] as const;
 
 export const CALL_FIELD_BY_HEADER: Record<string, keyof CallRecord> = {
@@ -176,6 +190,11 @@ export const CALL_FIELD_BY_HEADER: Record<string, keyof CallRecord> = {
   Notes: "notes",
   "Duration Sec": "durationSec",
   Source: "source",
+  "Audio URL": "audioUrl",
+  "Audio Path": "audioPath",
+  Transcript: "transcript",
+  "Transcript Status": "transcriptStatus",
+  "Transcript Summary": "transcriptSummary",
 };
 
 export const CALL_OUTCOMES = [
@@ -201,7 +220,38 @@ export const EMPTY_CALL: CallRecord = {
   notes: "",
   durationSec: "",
   source: "crm_ui",
+  audioUrl: "",
+  audioPath: "",
+  transcript: "",
+  transcriptStatus: "",
+  transcriptSummary: "",
 };
+
+/** Max upload size for call recordings (Whisper limit is 25MB). */
+export const MAX_CALL_AUDIO_BYTES = 25 * 1024 * 1024;
+
+export const ALLOWED_AUDIO_MIME = new Set([
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/mp4",
+  "audio/m4a",
+  "audio/x-m4a",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/wave",
+  "audio/webm",
+  "audio/ogg",
+  "video/webm", // some browsers label webm audio this way
+]);
+
+export const ALLOWED_AUDIO_EXTENSIONS = [
+  ".mp3",
+  ".m4a",
+  ".wav",
+  ".webm",
+  ".ogg",
+  ".mp4",
+] as const;
 
 /** Outcomes that require / show a callbackAt field in the UI */
 export const CALLBACK_OUTCOMES = new Set<string>(["callback_set", "interested", "connected"]);

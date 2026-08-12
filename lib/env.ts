@@ -7,3 +7,11 @@ export function clerkConfigured(): boolean {
 export function githubConfigured(): boolean {
   return Boolean(process.env.GITHUB_TOKEN);
 }
+
+export function blobConfigured(): boolean {
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+}
+
+export function openaiConfigured(): boolean {
+  return Boolean(process.env.OPENAI_API_KEY);
+}

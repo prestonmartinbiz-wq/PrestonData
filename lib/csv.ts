@@ -109,6 +109,22 @@ export function parseCallsCsv(csvText: string): CallRecord[] {
       call.durationSec =
         call.durationSec || pick(row, ["durationSec", "DurationSec", "duration_sec"]);
       call.source = call.source || pick(row, ["source"]) || "crm_ui";
+      call.audioUrl =
+        call.audioUrl || pick(row, ["audioUrl", "AudioUrl", "audio_url"]);
+      call.audioPath =
+        call.audioPath || pick(row, ["audioPath", "AudioPath", "audio_path"]);
+      call.transcript =
+        call.transcript || pick(row, ["transcript", "Transcript"]);
+      call.transcriptStatus =
+        call.transcriptStatus ||
+        pick(row, ["transcriptStatus", "TranscriptStatus", "transcript_status"]);
+      call.transcriptSummary =
+        call.transcriptSummary ||
+        pick(row, [
+          "transcriptSummary",
+          "TranscriptSummary",
+          "transcript_summary",
+        ]);
       return call;
     })
     .filter((c) => normalizeApn(c.apn) && (c.callId || c.calledAt));
@@ -127,6 +143,11 @@ export function callsToCsv(calls: CallRecord[]): string {
     Notes: call.notes,
     "Duration Sec": call.durationSec,
     Source: call.source || "crm_ui",
+    "Audio URL": call.audioUrl || "",
+    "Audio Path": call.audioPath || "",
+    Transcript: call.transcript || "",
+    "Transcript Status": call.transcriptStatus || "",
+    "Transcript Summary": call.transcriptSummary || "",
   }));
 
   if (!rows.length) {

@@ -635,11 +635,13 @@ export function LeadsDashboard({
               recentCalls={leadCalls}
               onCancel={() => setLoggingCall(false)}
               onLogged={({ call, leads: nextLeads, calls }) => {
-                setLeads(nextLeads);
-                const updated = nextLeads.find((l) => l.apn === draft.apn);
-                if (updated) {
-                  setDraft(updated);
-                  setSelected(updated);
+                if (nextLeads?.length) {
+                  setLeads(nextLeads);
+                  const updated = nextLeads.find((l) => l.apn === draft.apn);
+                  if (updated) {
+                    setDraft(updated);
+                    setSelected(updated);
+                  }
                 }
                 setLeadCalls(
                   [...calls]

@@ -147,6 +147,11 @@ export async function appendCall(input: AppendCallInput): Promise<{
         ? ""
         : String(input.durationSec).trim(),
     source: (input.source || "").trim() || "crm_ui",
+    audioUrl: "",
+    audioPath: "",
+    transcript: "",
+    transcriptStatus: "",
+    transcriptSummary: "",
   };
 
   if (calls.some((c) => c.callId === call.callId)) {
@@ -176,6 +181,47 @@ export async function appendCall(input: AppendCallInput): Promise<{
   ]);
 
   return { call, calls: nextCalls, leads: nextLeads, callsMeta, leadsMeta };
+}
+
+/** Update media/transcript fields on an existing call (does not alter outcome history). */
+export async function updateCallMedia(
+  callId: string,
+  patch: Partial<
+    Pick<
+      CallRecord,
+      | "audioUrl"
+      | "audioPath"
+      | "transcript"
+      | "transcriptStatus"
+      | "transcriptSummary"
+    >
+  >,
+  message?: string
+): Promise<{ call: CallRecord; calls: CallRecord[]; meta: SaveMeta }> {
+  const id = (callId || "").trim();
+  if (!id) throw new Error("callId is required");
+
+  const { calls } = await loadCalls();
+  const idx = calls.findIndex((c) => c.callId === id);
+  if (idx === -1) throw new Error("Call not found");
+
+  const next: CallRecord = {
+    ...calls[idx],
+    ...patch,
+  };
+  const nextCalls = [...calls];
+  nextCalls[idx] = next;
+
+  const meta = await saveCalls(
+    nextCalls,
+    message || `Update call media ${id}`
+  );
+  return { call: next, calls: nextCalls, meta };
+}
+
+export async function getCallById(callId: string): Promise<CallRecord | null> {
+  const { calls } = await loadCalls();
+  return calls.find((c) => c.callId === callId) || null;
 }
 
 export async function loadTeam(): Promise<{ team: TeamData; meta: SaveMeta }> {
