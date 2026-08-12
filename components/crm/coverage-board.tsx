@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CrexiUpload } from "@/components/crm/crexi-upload";
 import {
   Dialog,
   DialogContent,
@@ -196,6 +197,10 @@ export function CoverageBoard({
               <Table2 className="h-4 w-4" /> All leads
             </Link>
           </Button>
+          <CrexiUpload
+            variant="outline"
+            substationOptions={initialBuckets.map((b) => b.name)}
+          />
           <Button size="sm" onClick={() => fileRef.current?.click()}>
             <Upload className="h-4 w-4" /> Upload power email (.eml)
           </Button>

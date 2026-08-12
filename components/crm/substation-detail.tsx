@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Trash2, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CrexiUpload } from "@/components/crm/crexi-upload";
 import type { PowerAvailability } from "@/lib/types";
 import type { ParcelSummary, SubstationBucket } from "@/lib/substation";
 
@@ -154,9 +155,16 @@ export function SubstationDetail({
             </p>
             <h1 className="text-2xl font-semibold tracking-tight">{bucket.name}</h1>
           </div>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard">Open in leads</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <CrexiUpload
+              variant="outline"
+              defaultSubstation={bucket.name}
+              label="Upload Crexi export"
+            />
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/dashboard">Open in leads</Link>
+            </Button>
+          </div>
         </div>
       </div>
 
