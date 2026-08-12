@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { requireUser } from "@/lib/auth";
 import { loadPower, savePower } from "@/lib/data-store";
-import { parsePowerEml, type ParsedPower } from "@/lib/power";
+import { extractPowerFromText, parsePowerEml, type ParsedPower } from "@/lib/power";
 import type { PowerAvailability } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -62,8 +62,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ power: next, meta, added: record });
     }
 
-    // JSON body — save a (possibly user-edited) record.
-    const body = (await req.json()) as { item?: ParsedPower & Partial<PowerAvailability> };
+    // JSON body — either parse pasted text (preview) or save a record.
+    const body = (await req.json()) as {
+      item?: ParsedPower & Partial<PowerAvailability>;
+      text?: string;
+    };
+
+    // Parse pasted NVE email text into a preview (no save).
+    if (typeof body.text === "string") {
+      if (!body.text.trim()) {
+        return NextResponse.json({ error: "Paste some text first" }, { status: 400 });
+      }
+      const parsed = extractPowerFromText(body.text, { sourceFile: "pasted text" });
+      return NextResponse.json({ preview: parsed });
+    }
+
     if (!body.item) {
       return NextResponse.json({ error: "item is required" }, { status: 400 });
     }

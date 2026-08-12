@@ -8,6 +8,7 @@ import { ArrowLeft, Trash2, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CrexiUpload } from "@/components/crm/crexi-upload";
+import { PowerForm } from "@/components/crm/power-form";
 import type { PowerAvailability } from "@/lib/types";
 import type { ParcelSummary, SubstationBucket } from "@/lib/substation";
 
@@ -195,10 +196,15 @@ export function SubstationDetail({
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
-            No power emails yet. Upload a coordinator .eml from the Coverage board to
-            capture feeders, ISD, and trenching for this substation.
+            No power data yet. Add it below — upload the coordinator .eml, paste the NVE
+            text, or type the details in manually.
           </div>
         )}
+        <PowerForm
+          defaultSubstation={bucket.name}
+          title={`Add power data to ${bucket.name}`}
+          onSaved={() => router.refresh()}
+        />
       </section>
 
       <section className="space-y-3">

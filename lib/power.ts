@@ -14,6 +14,39 @@ function toMva(amount: number, unit: string): number {
   return /kva/i.test(unit) ? amount / 1000 : amount;
 }
 
+/** Render feeders as an editable text string, e.g. "HI-1222:6.5, HI-1225:8". */
+export function feedersToText(feeders: Feeder[]): string {
+  return feeders
+    .map((f) => (f.mva !== null ? `${f.id}:${f.mva}` : f.id))
+    .join(", ");
+}
+
+/**
+ * Parse a free-text feeder list into structured feeders. Accepts separators of
+ * comma / semicolon / newline and pairs like "HI-1222:6.5", "HI-1225 8 MVA",
+ * "HI-1206 500 kVA", or a bare "HI-1234".
+ */
+export function parseFeederText(input: string): Feeder[] {
+  const tokens = (input || "")
+    .split(/[,;\n]+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+  const out: Feeder[] = [];
+  const seen = new Set<string>();
+  for (const token of tokens) {
+    const m = /^([A-Za-z]{2,3}-?\s*\d{3,4})\s*[:=\s]?\s*([\d.]+)?\s*(MVA|kVA)?/i.exec(
+      token
+    );
+    if (!m) continue;
+    const id = normalizeFeederId(m[1]);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const mva = m[2] ? toMva(parseFloat(m[2]), m[3] || "MVA") : null;
+    out.push({ id, mva });
+  }
+  return out;
+}
+
 function extractSubstation(text: string): string {
   // Prefer an explicit "Substation: X" label, then the single proper noun that
   // precedes "substation" (e.g. "Two Highland substation feeders" -> "Highland").

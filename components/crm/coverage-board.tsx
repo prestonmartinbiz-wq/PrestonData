@@ -1,22 +1,19 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { ChevronRight, Table2, Upload, Zap } from "lucide-react";
+import { ChevronRight, Table2, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { CrexiUpload } from "@/components/crm/crexi-upload";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { ParsedPower } from "@/lib/power";
+import { CrexiUpload } from "@/components/crm/crexi-upload";
+import { PowerForm } from "@/components/crm/power-form";
 import type { SaveMeta } from "@/lib/types";
 import type { SubstationBucket } from "@/lib/substation";
 
@@ -95,22 +92,6 @@ function BucketCard({ bucket }: { bucket: SubstationBucket }) {
   );
 }
 
-const EMPTY_PARSED: ParsedPower = {
-  substation: "",
-  apn: "",
-  address: "",
-  isd: "",
-  peakDemand: "",
-  feeders: [],
-  trenchingFt: null,
-  trenchingSegments: 0,
-  contactName: "",
-  contactEmail: "",
-  emailSubject: "",
-  emailDate: "",
-  sourceFile: "",
-};
-
 export function CoverageBoard({
   initialBuckets,
   leadCount,
@@ -121,56 +102,7 @@ export function CoverageBoard({
   meta: SaveMeta;
 }) {
   const router = useRouter();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [uploadOpen, setUploadOpen] = useState(false);
-  const [parsing, setParsing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [preview, setPreview] = useState<ParsedPower | null>(null);
-
-  async function onFile(file: File) {
-    setParsing(true);
-    setPreview(null);
-    setUploadOpen(true);
-    try {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch("/api/power?preview=1", { method: "POST", body: form });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not read email");
-      setPreview({ ...EMPTY_PARSED, ...data.preview });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not read email");
-      setUploadOpen(false);
-    } finally {
-      setParsing(false);
-    }
-  }
-
-  async function save() {
-    if (!preview) return;
-    if (!preview.substation.trim()) {
-      toast.error("Substation is required");
-      return;
-    }
-    setSaving(true);
-    try {
-      const res = await fetch("/api/power", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ item: preview }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Save failed");
-      toast.success(`Power added to ${data.added.substation}`);
-      setUploadOpen(false);
-      setPreview(null);
-      router.refresh();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Save failed");
-    } finally {
-      setSaving(false);
-    }
-  }
+  const [powerOpen, setPowerOpen] = useState(false);
 
   const totalParcels = initialBuckets.reduce((a, b) => a + b.parcels, 0);
   const withPower = initialBuckets.filter((b) => b.power.length).length;
@@ -201,20 +133,9 @@ export function CoverageBoard({
             variant="outline"
             substationOptions={initialBuckets.map((b) => b.name)}
           />
-          <Button size="sm" onClick={() => fileRef.current?.click()}>
-            <Upload className="h-4 w-4" /> Upload power email (.eml)
+          <Button size="sm" onClick={() => setPowerOpen(true)}>
+            <Zap className="h-4 w-4" /> Add power data
           </Button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".eml,message/rfc822,text/plain"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onFile(f);
-              e.target.value = "";
-            }}
-          />
         </div>
       </div>
 
@@ -230,7 +151,7 @@ export function CoverageBoard({
           <Link href="/dashboard" className="font-medium text-slate-900 underline">
             leads page
           </Link>{" "}
-          to populate substation buckets.
+          or add a Crexi export to populate substation buckets.
         </div>
       )}
 
@@ -239,137 +160,22 @@ export function CoverageBoard({
         {leadCount ? ` · ${leadCount} leads loaded` : ""}
       </p>
 
-      <Dialog
-        open={uploadOpen}
-        onOpenChange={(o) => {
-          setUploadOpen(o);
-          if (!o) setPreview(null);
-        }}
-      >
+      <Dialog open={powerOpen} onOpenChange={setPowerOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Power email → substation</DialogTitle>
+            <DialogTitle>Add power data to a substation</DialogTitle>
           </DialogHeader>
-
-          {parsing ? (
-            <p className="py-8 text-center text-sm text-slate-500">Reading email…</p>
-          ) : preview ? (
-            <div className="space-y-4">
-              <p className="text-sm text-slate-500">
-                We scraped the details below from{" "}
-                <span className="font-medium text-slate-700">
-                  {preview.sourceFile || "the email"}
-                </span>
-                . Confirm the substation, then add it to the board.
-              </p>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
-                  <Label htmlFor="pw-sub">Substation</Label>
-                  <Input
-                    id="pw-sub"
-                    value={preview.substation}
-                    onChange={(e) =>
-                      setPreview({ ...preview, substation: e.target.value })
-                    }
-                    placeholder="e.g. Highland"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="pw-isd">ISD</Label>
-                  <Input
-                    id="pw-isd"
-                    value={preview.isd}
-                    onChange={(e) => setPreview({ ...preview, isd: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="pw-peak">Peak demand</Label>
-                  <Input
-                    id="pw-peak"
-                    value={preview.peakDemand}
-                    onChange={(e) =>
-                      setPreview({ ...preview, peakDemand: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="pw-apn">APN</Label>
-                  <Input
-                    id="pw-apn"
-                    value={preview.apn}
-                    onChange={(e) => setPreview({ ...preview, apn: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="pw-addr">Address</Label>
-                  <Input
-                    id="pw-addr"
-                    value={preview.address}
-                    onChange={(e) => setPreview({ ...preview, address: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label>Feeders ({preview.feeders.length})</Label>
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  {preview.feeders.length ? (
-                    preview.feeders.map((f) => (
-                      <Badge
-                        key={f.id}
-                        className="border-amber-200 bg-amber-50 text-amber-800"
-                      >
-                        {f.id} · {fmtMva(f.mva)}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-sm text-slate-400">None detected</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4 text-sm text-slate-600">
-                <span>
-                  Trenching:{" "}
-                  <span className="font-medium text-slate-900">
-                    {preview.trenchingFt !== null
-                      ? `${preview.trenchingFt.toLocaleString()} ft`
-                      : "—"}
-                  </span>
-                  {preview.trenchingSegments
-                    ? ` (${preview.trenchingSegments} segments)`
-                    : ""}
-                </span>
-              </div>
-
-              {preview.contactName || preview.contactEmail ? (
-                <p className="text-xs text-slate-400">
-                  From {preview.contactName}
-                  {preview.contactEmail ? ` · ${preview.contactEmail}` : ""}
-                </p>
-              ) : null}
-
-              <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setUploadOpen(false);
-                    setPreview(null);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={save} disabled={saving}>
-                  {saving ? "Saving…" : `Add to ${preview.substation || "board"}`}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <p className="py-8 text-center text-sm text-slate-500">
-              Choose a .eml file to continue.
-            </p>
-          )}
+          <p className="text-sm text-slate-500">
+            Upload the coordinator .eml, paste the NVE email text, or type the details
+            in — then pick the substation it belongs to.
+          </p>
+          <PowerForm
+            title="Power availability"
+            onSaved={() => {
+              setPowerOpen(false);
+              router.refresh();
+            }}
+          />
         </DialogContent>
       </Dialog>
     </div>

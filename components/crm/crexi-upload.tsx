@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { PowerForm } from "@/components/crm/power-form";
 
 /**
  * "Upload Crexi export" button + dialog. Imports a Crexi property-export CSV and
@@ -35,6 +36,7 @@ export function CrexiUpload({
   const [substation, setSubstation] = useState(defaultSubstation);
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showPower, setShowPower] = useState(false);
 
   async function submit() {
     if (!substation.trim()) {
@@ -75,6 +77,7 @@ export function CrexiUpload({
         onClick={() => {
           setSubstation(defaultSubstation);
           setFile(null);
+          setShowPower(false);
           setOpen(true);
         }}
       >
@@ -82,7 +85,7 @@ export function CrexiUpload({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Upload Crexi export</DialogTitle>
           </DialogHeader>
@@ -127,6 +130,24 @@ export function CrexiUpload({
               <Button onClick={submit} disabled={busy}>
                 {busy ? "Importing…" : "Import parcels"}
               </Button>
+            </div>
+
+            <div className="border-t border-slate-100 pt-3">
+              {showPower ? (
+                <PowerForm
+                  defaultSubstation={substation}
+                  title="Add power data (optional)"
+                  onSaved={() => router.refresh()}
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowPower(true)}
+                  className="text-sm font-medium text-slate-600 underline hover:text-slate-900"
+                >
+                  + Add power availability now (optional)
+                </button>
+              )}
             </div>
           </div>
         </DialogContent>
