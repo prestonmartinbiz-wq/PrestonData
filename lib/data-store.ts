@@ -1,10 +1,18 @@
 import { promises as fs } from "fs";
 import path from "path";
+import {
+  applyOutcomeToStatus,
+  applyRollupsToLead,
+  computeCallRollups,
+  newCallId,
+} from "@/lib/calls";
+import { callsToCsv, leadsToCsv, parseCallsCsv, parseLeadsCsv } from "@/lib/csv";
 import { hasGitHubToken, readGitHubFile, writeGitHubFile } from "@/lib/github";
-import { leadsToCsv, parseLeadsCsv } from "@/lib/csv";
-import type { Lead, SaveMeta, TeamData } from "@/lib/types";
+import type { CallRecord, Lead, SaveMeta, TeamData } from "@/lib/types";
+import { normalizeApn } from "@/lib/utils";
 
 const LEADS_PATH = "data/leads.csv";
+const CALLS_PATH = "data/calls.csv";
 const TEAM_PATH = "data/team.json";
 
 function localPath(rel: string) {
@@ -37,16 +45,29 @@ async function writeLocal(rel: string, content: string): Promise<SaveMeta> {
   };
 }
 
-export async function loadLeads(): Promise<{ leads: Lead[]; meta: SaveMeta }> {
+async function readText(rel: string): Promise<{ content: string; meta: SaveMeta }> {
   if (hasGitHubToken()) {
     try {
-      const { content, meta } = await readGitHubFile(LEADS_PATH);
-      return { leads: parseLeadsCsv(content), meta };
+      return await readGitHubFile(rel);
     } catch (err) {
-      console.warn("GitHub leads read failed, falling back to local", err);
+      console.warn(`GitHub read failed for ${rel}, falling back to local`, err);
     }
   }
-  const { content, meta } = await readLocal(LEADS_PATH);
+  try {
+    return await readLocal(rel);
+  } catch (err) {
+    if (rel === CALLS_PATH) {
+      return {
+        content: callsToCsv([]),
+        meta: { source: "local", path: rel },
+      };
+    }
+    throw err;
+  }
+}
+
+export async function loadLeads(): Promise<{ leads: Lead[]; meta: SaveMeta }> {
+  const { content, meta } = await readText(LEADS_PATH);
   return { leads: parseLeadsCsv(content), meta };
 }
 
@@ -59,6 +80,148 @@ export async function saveLeads(
     return writeGitHubFile(LEADS_PATH, csv, message);
   }
   return writeLocal(LEADS_PATH, csv);
+}
+
+export async function loadCalls(): Promise<{ calls: CallRecord[]; meta: SaveMeta }> {
+  const { content, meta } = await readText(CALLS_PATH);
+  return { calls: parseCallsCsv(content), meta };
+}
+
+export async function saveCalls(
+  calls: CallRecord[],
+  message = "Update calls.csv via RMax CRM"
+): Promise<SaveMeta> {
+  const csv = callsToCsv(calls);
+  if (hasGitHubToken()) {
+    return writeGitHubFile(CALLS_PATH, csv, message);
+  }
+  return writeLocal(CALLS_PATH, csv);
+}
+
+export type AppendCallInput = {
+  apn: string;
+  caller?: string;
+  contactName?: string;
+  phoneUsed?: string;
+  calledAt?: string;
+  outcome: string;
+  callbackAt?: string;
+  notes?: string;
+  durationSec?: string | number;
+  source?: string;
+  callId?: string;
+};
+
+/**
+ * Append-only call log write. Never edits/deletes prior rows.
+ * Recomputes lead rollups for the APN from the full history and may
+ * bump lead status based on outcome (without wiping richer statuses).
+ */
+export async function appendCall(input: AppendCallInput): Promise<{
+  call: CallRecord;
+  calls: CallRecord[];
+  leads: Lead[];
+  callsMeta: SaveMeta;
+  leadsMeta: SaveMeta;
+}> {
+  const key = normalizeApn(input.apn);
+  if (!key) throw new Error("APN is required");
+  if (!(input.outcome || "").trim()) throw new Error("outcome is required");
+
+  const [{ calls }, { leads }] = await Promise.all([loadCalls(), loadLeads()]);
+  const leadIdx = leads.findIndex((l) => normalizeApn(l.apn) === key);
+  if (leadIdx === -1) throw new Error("Lead not found for APN");
+
+  const call: CallRecord = {
+    callId: (input.callId || "").trim() || newCallId(),
+    apn: key,
+    caller: (input.caller || "").trim(),
+    contactName: (input.contactName || "").trim(),
+    phoneUsed: (input.phoneUsed || "").trim(),
+    calledAt: (input.calledAt || "").trim() || new Date().toISOString(),
+    outcome: (input.outcome || "").trim(),
+    callbackAt: (input.callbackAt || "").trim(),
+    notes: (input.notes || "").trim(),
+    durationSec:
+      input.durationSec === undefined || input.durationSec === null
+        ? ""
+        : String(input.durationSec).trim(),
+    source: (input.source || "").trim() || "crm_ui",
+    audioUrl: "",
+    audioPath: "",
+    transcript: "",
+    transcriptStatus: "",
+    transcriptSummary: "",
+  };
+
+  if (calls.some((c) => c.callId === call.callId)) {
+    throw new Error("callId already exists");
+  }
+
+  const nextCalls = [...calls, call];
+  const rollups = computeCallRollups(nextCalls, key);
+  const prev = leads[leadIdx];
+  const nextLead: Lead = applyRollupsToLead(
+    {
+      ...prev,
+      status: applyOutcomeToStatus(prev.status, call.outcome),
+    },
+    nextCalls
+  );
+  // ensure rollups from this write win
+  Object.assign(nextLead, rollups, { needsSkipTrace: prev.needsSkipTrace || "" });
+
+  const nextLeads = [...leads];
+  nextLeads[leadIdx] = nextLead;
+
+  const who = call.caller || "crm";
+  const [callsMeta, leadsMeta] = await Promise.all([
+    saveCalls(nextCalls, `Log call ${call.callId} for ${key} (${who})`),
+    saveLeads(nextLeads, `Update call rollups for ${key} (${who})`),
+  ]);
+
+  return { call, calls: nextCalls, leads: nextLeads, callsMeta, leadsMeta };
+}
+
+/** Update media/transcript fields on an existing call (does not alter outcome history). */
+export async function updateCallMedia(
+  callId: string,
+  patch: Partial<
+    Pick<
+      CallRecord,
+      | "audioUrl"
+      | "audioPath"
+      | "transcript"
+      | "transcriptStatus"
+      | "transcriptSummary"
+    >
+  >,
+  message?: string
+): Promise<{ call: CallRecord; calls: CallRecord[]; meta: SaveMeta }> {
+  const id = (callId || "").trim();
+  if (!id) throw new Error("callId is required");
+
+  const { calls } = await loadCalls();
+  const idx = calls.findIndex((c) => c.callId === id);
+  if (idx === -1) throw new Error("Call not found");
+
+  const next: CallRecord = {
+    ...calls[idx],
+    ...patch,
+  };
+  const nextCalls = [...calls];
+  nextCalls[idx] = next;
+
+  const meta = await saveCalls(
+    nextCalls,
+    message || `Update call media ${id}`
+  );
+  return { call: next, calls: nextCalls, meta };
+}
+
+export async function getCallById(callId: string): Promise<CallRecord | null> {
+  const { calls } = await loadCalls();
+  return calls.find((c) => c.callId === callId) || null;
 }
 
 export async function loadTeam(): Promise<{ team: TeamData; meta: SaveMeta }> {

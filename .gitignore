@@ -24,6 +24,10 @@
 .DS_Store
 *.pem
 
+# local call recordings (use Vercel Blob in production)
+/data/call-audio/**
+!/data/call-audio/.gitkeep
+
 # debug
 npm-debug.log*
 yarn-debug.log*

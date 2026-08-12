@@ -5,10 +5,12 @@ Ownership / outreach CRM for RMax land acquisition. Team login via Clerk, CSV le
 ## Features
 
 - Clerk-protected CRM routes (demo mode when Clerk keys are missing)
-- Leads dashboard: search, filter (status / assignee / needs contact / my leads), sort, row drawer edit
+- Leads dashboard: search, filter (status / assignee / needs contact / my leads / overdue callback / never called), sort, row drawer edit
+- Append-only call log (`data/calls.csv`) with lead rollups (lastCalledAt, lastOutcome, nextCallbackAt, callCount)
+- Optional call recording upload + Whisper transcription (`audioUrl`, `transcript`, `transcriptStatus`, `transcriptSummary`)
 - CRUD + CSV import (merge by normalized APN; preserve Assigned To unless CSV provides it)
 - Team page (name + email) saved with leads data
-- Production source of truth: GitHub repo prestonmartinbiz-wq/PrestonData (data/leads.csv, data/team.json)
+- Production source of truth: GitHub repo prestonmartinbiz-wq/PrestonData (data/leads.csv, data/calls.csv, data/team.json)
 - Local fallback when GITHUB_TOKEN is unset
 
 ## Setup
@@ -40,7 +42,7 @@ Without real Clerk keys the app runs in demo mode (no login gate). Without GITHU
 
 ### GitHub data repo
 
-Ensure main has data/leads.csv and data/team.json. Seed copies are included under data/ in this project.
+Ensure main has data/leads.csv, data/calls.csv, and data/team.json. Seed copies are included under data/ in this project.
 
 ### Build
 
@@ -58,8 +60,26 @@ Build succeeds without real Clerk/GitHub secrets (demo/local fallbacks).
 - /sign-in, /sign-up → Clerk auth
 - /api/leads → GET/POST/PUT/DELETE
 - /api/leads/import → CSV import merge
+- /api/calls → GET (JSON or `?format=csv`, filter `?apn=`) / POST (append-only log + lead rollups)
+- /api/calls/[callId]/audio → POST multipart upload + transcribe; GET streams audio (auth required)
 - /api/team → GET/PUT
 - /api/meta → save source metadata
+
+### Call log (Dispatch)
+
+Append-only history lives in `data/calls.csv`. Lead rollups on `data/leads.csv` are recomputed from that history on each POST.
+
+**nextCallbackAt rule:** among calls with `callbackAt`, prefer the latest-by-`calledAt` callback still in the future; if none are future, keep the most recent `callbackAt` (so overdue callbacks stay visible).
+
+**Queue ranking for Dispatch:** overdue callbacks first (`nextCallbackAt` before now), then never-called (`callCount` empty/0 and no `lastCalledAt`). Skip parcels with `needsSkipTrace` set, and skip future-dated callbacks when ranking "due now".
+
+Read `transcript` / `transcriptSummary` on each call for seller-conversation insights (Crexi/lead CSV remains the property/owner source). `transcriptStatus` is `ready` | `pending` | `failed` | `skipped` (no `OPENAI_API_KEY`).
+
+### Call audio
+
+- Dev/local: files under `data/call-audio/` (gitignored), served via authenticated `GET /api/calls/[callId]/audio`
+- Production: set `BLOB_READ_WRITE_TOKEN` for private Vercel Blob storage (do not put binaries in GitHub)
+- Transcription: set `OPENAI_API_KEY` for Whisper; uploads still succeed without it (`transcriptStatus=skipped`)
 
 ## Stack
 
