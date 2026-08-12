@@ -8,12 +8,20 @@ import {
 } from "@/lib/calls";
 import { callsToCsv, leadsToCsv, parseCallsCsv, parseLeadsCsv } from "@/lib/csv";
 import { hasGitHubToken, readGitHubFile, writeGitHubFile } from "@/lib/github";
-import type { CallRecord, Lead, SaveMeta, TeamData } from "@/lib/types";
+import type {
+  CallRecord,
+  Lead,
+  PowerAvailability,
+  PowerData,
+  SaveMeta,
+  TeamData,
+} from "@/lib/types";
 import { normalizeApn } from "@/lib/utils";
 
 const LEADS_PATH = "data/leads.csv";
 const CALLS_PATH = "data/calls.csv";
 const TEAM_PATH = "data/team.json";
+const POWER_PATH = "data/power.json";
 
 function localPath(rel: string) {
   // Scope to data/ so Turbopack does not trace the whole project
@@ -246,4 +254,29 @@ export async function saveTeam(
     return writeGitHubFile(TEAM_PATH, json, message);
   }
   return writeLocal(TEAM_PATH, json);
+}
+
+export async function loadPower(): Promise<{
+  power: PowerAvailability[];
+  meta: SaveMeta;
+}> {
+  try {
+    const { content, meta } = await readText(POWER_PATH);
+    const parsed = JSON.parse(content) as PowerData;
+    return { power: Array.isArray(parsed.items) ? parsed.items : [], meta };
+  } catch {
+    // No file yet (or unreadable) — treat as empty.
+    return { power: [], meta: { source: "local", path: POWER_PATH } };
+  }
+}
+
+export async function savePower(
+  power: PowerAvailability[],
+  message = "Update power.json via RMax CRM"
+): Promise<SaveMeta> {
+  const json = JSON.stringify({ items: power } satisfies PowerData, null, 2) + "\n";
+  if (hasGitHubToken()) {
+    return writeGitHubFile(POWER_PATH, json, message);
+  }
+  return writeLocal(POWER_PATH, json);
 }

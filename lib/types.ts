@@ -72,6 +72,54 @@ export type TeamMember = {
   email: string;
 };
 
+/** A substation feeder and its available capacity (normalized to MVA). */
+export type Feeder = {
+  /** Feeder identifier, normalized to e.g. "HI-1222". */
+  id: string;
+  /** Available/required capacity in MVA (kVA values are converted to MVA). Null when unknown. */
+  mva: number | null;
+};
+
+/**
+ * Power-availability data extracted from an NV Energy coordinator email (.eml).
+ * These describe where excess feeder capacity exists at a substation.
+ */
+export type PowerAvailability = {
+  id: string;
+  /** Substation name, e.g. "Highland". */
+  substation: string;
+  /** Parcel APN referenced in the request, if any. */
+  apn: string;
+  /** Property address referenced in the request. */
+  address: string;
+  /** In-service date, e.g. "Q2 2027". */
+  isd: string;
+  /** Peak demand as written, e.g. "10 MW and 15 MW". */
+  peakDemand: string;
+  /** Feeders and their capacities. */
+  feeders: Feeder[];
+  /** Total trenching distance in feet across all mentioned segments. Null when unknown. */
+  trenchingFt: number | null;
+  /** Number of distinct trenching segments mentioned. */
+  trenchingSegments: number;
+  /** Coordinator contact name from the signature, e.g. "Chad Jacks". */
+  contactName: string;
+  /** Coordinator contact email. */
+  contactEmail: string;
+  /** Source email subject. */
+  emailSubject: string;
+  /** Source email date. */
+  emailDate: string;
+  /** Original source filename, when uploaded. */
+  sourceFile: string;
+  /** ISO datetime this record was added. */
+  createdAt: string;
+};
+
+export type PowerData = {
+  items: PowerAvailability[];
+};
+
 export type TeamData = {
   members: TeamMember[];
 };

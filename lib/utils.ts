@@ -9,6 +9,15 @@ export function normalizeApn(apn: string): string {
   return (apn || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 }
 
+/** URL-safe slug for a substation name, e.g. "New Substation 2029" -> "new-substation-2029". */
+export function slugify(value: string): string {
+  return (value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 const CLARK_OPENWEB_BASE = "https://maps.clarkcountynv.gov/ow/";
 /** Default OpenWeb zoom for Nevada State Plane (easting/northing) links. */
 const CLARK_OPENWEB_STATE_PLANE_ZOOM = 6;
