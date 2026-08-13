@@ -2,7 +2,7 @@
   "items": [
     {
       "id": "aafd1ceb-a94d-4587-bf8d-329e00416bc2",
-      "name": "Russel Polaris Substation",
+      "name": "Procyon",
       "address": "3560 W RUSSELL RD",
       "latitude": "36°05'12.2\"N",
       "longitude": "115°11'13.6\"W",
@@ -37,7 +37,7 @@
       "dateResponseReceived": "2026-08-13T22:35:16.631Z",
       "notes": "2 feeder(s) · Peak demand 10 MW and 15 MW",
       "createdAt": "2026-08-13T22:34:34.055Z",
-      "updatedAt": "2026-08-13T22:35:16.631Z"
+      "updatedAt": "2026-08-13T22:38:50.224Z"
     },
     {
       "id": "7da49eca-c5db-4bb7-8948-6764f4dadcae",
