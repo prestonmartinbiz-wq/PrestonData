@@ -169,6 +169,50 @@ export type TasksData = {
   items: Task[];
 };
 
+/** Substation Power Pipeline: lifecycle of an NV Energy power-availability study. */
+export type PipelineStatus =
+  | "to_be_searched"
+  | "awaiting_nve_response"
+  | "confirmed";
+
+export type PipelinePriority = "High" | "Medium" | "Low";
+
+export type PipelineSubstation = {
+  id: string;
+  name: string;
+  address: string;
+  latitude: string;
+  longitude: string;
+  status: PipelineStatus;
+  /** Analyst who flagged it. */
+  submittedBy: string;
+  dateAdded: string;
+  /** Why the analyst wants this studied. */
+  justification: string;
+  /** Analyst priority, ranks the unconfirmed "Interest" list. */
+  priority: PipelinePriority;
+  /** EE who claimed it from the queue. */
+  assignedEe: string;
+  dateStudySubmittedToNve: string;
+  /** Pasted email text or stored .eml text. */
+  nveResponseRaw: string;
+  mwAvailable: number | null;
+  isdDate: string;
+  longLeadItems: string[];
+  longLeadPresent: boolean;
+  compositeScore: number | null;
+  dateResponseReceived: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PipelineData = {
+  items: PipelineSubstation[];
+};
+
+export const PIPELINE_PRIORITIES: PipelinePriority[] = ["High", "Medium", "Low"];
+
 export type TeamData = {
   members: TeamMember[];
 };

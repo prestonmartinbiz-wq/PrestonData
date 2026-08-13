@@ -16,6 +16,8 @@ import type {
   SaveMeta,
   SubstationMeta,
   SubstationsData,
+  PipelineSubstation,
+  PipelineData,
   Task,
   TasksData,
   TeamData,
@@ -28,6 +30,7 @@ const TEAM_PATH = "data/team.json";
 const POWER_PATH = "data/power.json";
 const SUBSTATIONS_PATH = "data/substations.json";
 const TASKS_PATH = "data/tasks.json";
+const PIPELINE_PATH = "data/substation-pipeline.json";
 
 function localPath(rel: string) {
   // Scope to data/ so Turbopack does not trace the whole project
@@ -334,4 +337,28 @@ export async function saveTasks(
     return writeGitHubFile(TASKS_PATH, json, message);
   }
   return writeLocal(TASKS_PATH, json);
+}
+
+export async function loadPipeline(): Promise<{
+  items: PipelineSubstation[];
+  meta: SaveMeta;
+}> {
+  try {
+    const { content, meta } = await readText(PIPELINE_PATH);
+    const parsed = JSON.parse(content) as PipelineData;
+    return { items: Array.isArray(parsed.items) ? parsed.items : [], meta };
+  } catch {
+    return { items: [], meta: { source: "local", path: PIPELINE_PATH } };
+  }
+}
+
+export async function savePipeline(
+  items: PipelineSubstation[],
+  message = "Update substation-pipeline.json via RMax CRM"
+): Promise<SaveMeta> {
+  const json = JSON.stringify({ items } satisfies PipelineData, null, 2) + "\n";
+  if (hasGitHubToken()) {
+    return writeGitHubFile(PIPELINE_PATH, json, message);
+  }
+  return writeLocal(PIPELINE_PATH, json);
 }

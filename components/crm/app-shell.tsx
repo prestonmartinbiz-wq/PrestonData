@@ -12,6 +12,7 @@ const ClerkUserButton = dynamic(
 
 const nav = [
   { href: "/board", label: "Board" },
+  { href: "/pipeline", label: "Pipeline" },
   { href: "/dashboard", label: "Leads" },
   { href: "/tasks", label: "Tasks" },
   { href: "/team", label: "Team" },
