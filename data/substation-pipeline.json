@@ -1,6 +1,33 @@
 {
   "items": [
     {
+      "id": "aafd1ceb-a94d-4587-bf8d-329e00416bc2",
+      "name": "Russel Polaris Substation",
+      "address": "3560 W RUSSELL RD",
+      "latitude": "36°05'12.2\"N",
+      "longitude": "115°11'13.6\"W",
+      "status": "to_be_searched",
+      "submittedBy": "demo@local.dev",
+      "dateAdded": "2026-08-13T22:34:34.055Z",
+      "justification": "for Don Ahern we think there is power in this area",
+      "priority": "High",
+      "assignedEe": "",
+      "dateStudySubmittedToNve": "",
+      "nveResponseRaw": "",
+      "mwAvailable": null,
+      "peakDemand": "",
+      "feeders": [],
+      "trenchingFt": null,
+      "isdDate": "",
+      "longLeadItems": [],
+      "longLeadPresent": false,
+      "compositeScore": null,
+      "dateResponseReceived": "",
+      "notes": "",
+      "createdAt": "2026-08-13T22:34:34.055Z",
+      "updatedAt": "2026-08-13T22:34:34.055Z"
+    },
+    {
       "id": "7da49eca-c5db-4bb7-8948-6764f4dadcae",
       "name": "Test",
       "address": "123 santra",
