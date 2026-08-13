@@ -6,13 +6,13 @@
       "address": "123 santra",
       "latitude": "111",
       "longitude": "22222",
-      "status": "to_be_searched",
+      "status": "awaiting_nve_response",
       "submittedBy": "demo@local.dev",
       "dateAdded": "2026-08-13T22:28:59.994Z",
       "justification": "its good",
       "priority": "Medium",
-      "assignedEe": "",
-      "dateStudySubmittedToNve": "",
+      "assignedEe": "demo@local.dev",
+      "dateStudySubmittedToNve": "2026-08-13",
       "nveResponseRaw": "",
       "mwAvailable": null,
       "peakDemand": "",
@@ -25,7 +25,7 @@
       "dateResponseReceived": "",
       "notes": "",
       "createdAt": "2026-08-13T22:28:59.994Z",
-      "updatedAt": "2026-08-13T22:28:59.996Z"
+      "updatedAt": "2026-08-13T22:29:24.496Z"
     },
     {
       "id": "9490c2d8-ad51-49f9-a880-7b2ee3dea7c4",
