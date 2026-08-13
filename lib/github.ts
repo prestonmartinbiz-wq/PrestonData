@@ -3,7 +3,9 @@ import type { SaveMeta } from "@/lib/types";
 
 const OWNER = process.env.GITHUB_OWNER || "prestonmartinbiz-wq";
 const REPO = process.env.GITHUB_REPO || "PrestonData";
-const BRANCH = "main";
+// Branch used as the read/write source of truth. Defaults to main, but can be
+// pointed at the deployed branch so live edits persist alongside its data.
+const BRANCH = process.env.GITHUB_BRANCH || "main";
 
 export function hasGitHubToken(): boolean {
   return Boolean(process.env.GITHUB_TOKEN);
