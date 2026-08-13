@@ -34,8 +34,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No email text found" }, { status: 400 });
     }
 
-    const { fields, via } = await extractNve(text);
-    return NextResponse.json({ fields, via, raw: text });
+    const fields = extractNve(text);
+    return NextResponse.json({ fields, via: "parser", raw: text });
   } catch (err) {
     if (err instanceof Response) return err;
     console.error(err);

@@ -197,6 +197,12 @@ export type PipelineSubstation = {
   /** Pasted email text or stored .eml text. */
   nveResponseRaw: string;
   mwAvailable: number | null;
+  /** Peak demand as written in the email, e.g. "10 MW and 15 MW". */
+  peakDemand: string;
+  /** Feeders and their capacities pulled from the email. */
+  feeders: Feeder[];
+  /** Total trenching distance in feet across mentioned segments. */
+  trenchingFt: number | null;
   isdDate: string;
   longLeadItems: string[];
   longLeadPresent: boolean;

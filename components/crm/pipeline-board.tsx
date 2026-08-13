@@ -92,12 +92,18 @@ export function PipelineBoard({
   const [respText, setRespText] = useState("");
   const [respRaw, setRespRaw] = useState("");
   const [extracting, setExtracting] = useState(false);
+  const [dropping, setDropping] = useState(false);
   const [review, setReview] = useState({
     mwAvailable: "",
     isdDate: "",
     longLeadItems: "",
     notes: "",
   });
+  const [extra, setExtra] = useState<{
+    feeders: { id: string; mva: number | null }[];
+    trenchingFt: number | null;
+    peakDemand: string;
+  }>({ feeders: [], trenchingFt: null, peakDemand: "" });
   const respFileRef = useRef<HTMLInputElement>(null);
 
   const daysSince = (iso: string): number | null => {
@@ -194,9 +200,21 @@ export function PipelineBoard({
     setRespText("");
     setRespRaw("");
     setReview({ mwAvailable: "", isdDate: "", longLeadItems: "", notes: "" });
+    setExtra({ feeders: [], trenchingFt: null, peakDemand: "" });
   }
 
-  function applyExtract(data: { fields: { mwAvailable: number | null; isdDate: string; longLeadItems: string[]; notes: string }; raw: string; via: string }) {
+  function applyExtract(data: {
+    fields: {
+      mwAvailable: number | null;
+      isdDate: string;
+      longLeadItems: string[];
+      notes: string;
+      peakDemand?: string;
+      feeders?: { id: string; mva: number | null }[];
+      trenchingFt?: number | null;
+    };
+    raw: string;
+  }) {
     setRespRaw(data.raw);
     setReview({
       mwAvailable: data.fields.mwAvailable !== null ? String(data.fields.mwAvailable) : "",
@@ -204,7 +222,12 @@ export function PipelineBoard({
       longLeadItems: (data.fields.longLeadItems || []).join("\n"),
       notes: data.fields.notes || "",
     });
-    toast.success(`Extracted via ${data.via === "llm" ? "AI" : "text parser"} — review and confirm`);
+    setExtra({
+      feeders: data.fields.feeders || [],
+      trenchingFt: data.fields.trenchingFt ?? null,
+      peakDemand: data.fields.peakDemand || "",
+    });
+    toast.success("Pulled from email — review and confirm");
   }
 
   async function extractFromFile(file: File) {
@@ -259,6 +282,9 @@ export function PipelineBoard({
             isdDate: review.isdDate.trim(),
             longLeadItems: review.longLeadItems.split("\n").map((s) => s.trim()).filter(Boolean),
             notes: review.notes.trim(),
+            peakDemand: extra.peakDemand,
+            feeders: extra.feeders,
+            trenchingFt: extra.trenchingFt,
             nveResponseRaw: respRaw || respText,
           },
         }),
@@ -350,6 +376,7 @@ export function PipelineBoard({
                   <th className="px-3 py-2 font-medium">#</th>
                   <th className="px-3 py-2 font-medium">Substation</th>
                   <th className="px-3 py-2 font-medium">MW avail</th>
+                  <th className="px-3 py-2 font-medium">Feeders</th>
                   <th className="px-3 py-2 font-medium">Score</th>
                   <th className="px-3 py-2 font-medium">Rating</th>
                   <th className="px-3 py-2 font-medium">Long lead</th>
@@ -365,6 +392,19 @@ export function PipelineBoard({
                       <td className="px-3 py-2 font-medium text-slate-900">{it.name}</td>
                       <td className="px-3 py-2 tabular-nums">
                         {it.mwAvailable !== null ? `${it.mwAvailable} MW` : "—"}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-slate-600">
+                        {it.feeders && it.feeders.length ? (
+                          <span title={it.feeders.map((f) => f.id + (f.mva !== null ? ` ${f.mva}MVA` : "")).join(", ")}>
+                            {it.feeders.length} ·{" "}
+                            {Math.round(
+                              it.feeders.reduce((s, f) => s + (f.mva ?? 0), 0) * 100
+                            ) / 100}{" "}
+                            MVA
+                          </span>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="px-3 py-2 tabular-nums font-semibold">
                         {it.compositeScore ?? "—"}
@@ -387,7 +427,7 @@ export function PipelineBoard({
                 })}
                 {!tracked.length ? (
                   <tr>
-                    <td colSpan={7} className="px-3 py-10 text-center text-slate-500">
+                    <td colSpan={8} className="px-3 py-10 text-center text-slate-500">
                       No confirmed substations yet. Confirm an NVE response in the EE Queue.
                     </td>
                   </tr>
@@ -589,15 +629,46 @@ export function PipelineBoard({
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-slate-500">
-              Upload the .eml or paste the response text. We pre-fill the fields — review and
-              edit before confirming (nothing is scored until you confirm).
+              Drag in the .eml (or a .txt), or paste the response text. Fields are pulled
+              automatically — no AI/API. Review and edit before confirming (nothing is
+              scored until you confirm).
             </p>
-            <div className="flex flex-wrap items-center gap-2">
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDropping(true);
+              }}
+              onDragLeave={() => setDropping(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDropping(false);
+                const f = e.dataTransfer.files?.[0];
+                if (f) extractFromFile(f);
+              }}
+              className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-3 py-5 text-center text-xs ${
+                dropping ? "border-slate-900 bg-slate-50" : "border-slate-300"
+              }`}
+            >
+              <Upload className="mb-1 h-4 w-4 text-slate-400" />
+              {extracting ? (
+                <span className="text-slate-600">Reading…</span>
+              ) : (
+                <span className="text-slate-500">
+                  Drag &amp; drop the NVE .eml / .txt here, or{" "}
+                  <button
+                    type="button"
+                    className="font-medium text-slate-900 underline"
+                    onClick={() => respFileRef.current?.click()}
+                  >
+                    choose a file
+                  </button>
+                </span>
+              )}
               <input
                 ref={respFileRef}
                 type="file"
                 accept=".eml,message/rfc822,text/plain"
-                className="text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-white hover:file:bg-slate-800"
+                className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
                   if (f) extractFromFile(f);
@@ -613,8 +684,28 @@ export function PipelineBoard({
               onChange={(e) => setRespText(e.target.value)}
             />
             <Button variant="secondary" size="sm" onClick={extractFromText} disabled={extracting}>
-              {extracting ? "Extracting…" : "Extract from text"}
+              {extracting ? "Reading…" : "Pull from pasted text"}
             </Button>
+
+            {extra.feeders.length || extra.trenchingFt !== null || extra.peakDemand ? (
+              <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                <div className="font-medium text-slate-700">Pulled from email</div>
+                {extra.peakDemand ? <div className="mt-1">Peak demand: {extra.peakDemand}</div> : null}
+                {extra.feeders.length ? (
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {extra.feeders.map((f) => (
+                      <Badge key={f.id} className="border-amber-200 bg-amber-50 text-amber-800">
+                        {f.id}
+                        {f.mva !== null ? ` · ${f.mva} MVA` : ""}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : null}
+                {extra.trenchingFt !== null ? (
+                  <div className="mt-1">Trenching: {extra.trenchingFt.toLocaleString()} ft</div>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
               <div>

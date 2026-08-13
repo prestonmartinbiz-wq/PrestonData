@@ -1,12 +1,24 @@
-import OpenAI from "openai";
 import { extractPowerFromText } from "@/lib/power";
-import { openaiConfigured } from "@/lib/transcribe";
+import type { Feeder } from "@/lib/types";
+
+/**
+ * Deterministic extraction of NV Energy power-availability responses.
+ *
+ * NVE emails follow a consistent format, so we pull the fields with plain
+ * parsing — no AI, no API key. Reuses the battle-tested power parser for
+ * substation / feeders (MVA, kVA->MVA) / trenching, and derives the pipeline
+ * fields (MW available, ISD date, long-lead) on top.
+ */
 
 export type NveExtract = {
   mwAvailable: number | null;
   isdDate: string;
   longLeadItems: string[];
   notes: string;
+  peakDemand: string;
+  feeders: Feeder[];
+  trenchingFt: number | null;
+  substation: string;
 };
 
 const MONTHS: Record<string, number> = {
@@ -44,11 +56,11 @@ export function parseIsdToDate(value: string): string {
   return "";
 }
 
-function firstMw(text: string): number | null {
-  const m = /([\d.]+)\s*(MW|MVA)\b/i.exec(text || "");
-  if (!m) return null;
-  const n = parseFloat(m[1]);
-  return Number.isFinite(n) ? n : null;
+/** Largest MW/MVA figure in a string (peak demand can list two options). */
+function maxMw(text: string): number | null {
+  const matches = [...(text || "").matchAll(/([\d.]+)\s*(MW|MVA)\b/gi)];
+  const nums = matches.map((m) => parseFloat(m[1])).filter((n) => Number.isFinite(n));
+  return nums.length ? Math.max(...nums) : null;
 }
 
 /** Pull long-lead items from the response; empty when NVE says none. */
@@ -66,75 +78,49 @@ export function extractLongLeadItems(text: string): string[] {
   return Array.from(items).slice(0, 8);
 }
 
-/** Regex fallback extraction (no API key required). */
-export function extractNveRegex(text: string): NveExtract {
+/** Extract the ISD value string from an "ISD:" line (before date parsing). */
+function extractIsdRaw(text: string): string {
+  const m = /\bISD:?\s*([^\n\r]+)/i.exec(text || "");
+  return m ? m[1].trim() : "";
+}
+
+/** Extract the peak-demand value string from a "Peak Demand:" line. */
+function extractPeakDemand(text: string): string {
+  const m = /\bPeak Demand:?\s*([^\n\r]+)/i.exec(text || "");
+  return m ? m[1].trim() : "";
+}
+
+/**
+ * Deterministically extract structured fields from NVE response text.
+ * Works the same for pasted text and for the plain-text body of a .eml.
+ */
+export function extractNve(text: string): NveExtract {
   const power = extractPowerFromText(text);
-  return {
-    mwAvailable: firstMw(power.peakDemand) ?? firstMw(text),
-    isdDate: parseIsdToDate(power.isd) || parseIsdToDate(text),
-    longLeadItems: extractLongLeadItems(text),
-    notes: "",
-  };
-}
+  const peakDemand = extractPeakDemand(text) || power.peakDemand || "";
+  const isdRaw = power.isd || extractIsdRaw(text);
 
-const EXTRACTION_PROMPT = `You are extracting structured data from an NV Energy interconnection/power availability response email.
-Return ONLY valid JSON, no other text, in this exact shape:
+  const totalMva = power.feeders
+    .map((f) => f.mva)
+    .filter((v): v is number => v !== null)
+    .reduce((a, b) => a + b, 0);
 
-{
-  "mw_available": <number or null>,
-  "isd_date": "<YYYY-MM-DD or null>",
-  "long_lead_items": ["<item description>", ...],
-  "notes": "<anything else relevant to capacity or timeline, 1-2 sentences>"
-}
-
-If a field isn't stated in the email, use null (or empty array for long_lead_items). Do not guess or infer values that aren't explicitly stated.
-
-Email text:
----
-{{email_body}}
----`;
-
-/** LLM extraction when OPENAI_API_KEY is configured; null otherwise or on failure. */
-export async function extractNveWithLLM(text: string): Promise<NveExtract | null> {
-  if (!openaiConfigured()) return null;
-  try {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "user",
-          content: EXTRACTION_PROMPT.replace("{{email_body}}", text.slice(0, 12000)),
-        },
-      ],
-    });
-    const raw = completion.choices[0]?.message?.content || "{}";
-    const parsed = JSON.parse(raw) as {
-      mw_available?: number | null;
-      isd_date?: string | null;
-      long_lead_items?: string[];
-      notes?: string;
-    };
-    return {
-      mwAvailable:
-        typeof parsed.mw_available === "number" ? parsed.mw_available : null,
-      isdDate: parsed.isd_date ? parseIsdToDate(parsed.isd_date) || parsed.isd_date : "",
-      longLeadItems: Array.isArray(parsed.long_lead_items) ? parsed.long_lead_items : [],
-      notes: parsed.notes || "",
-    };
-  } catch (err) {
-    console.warn("NVE LLM extraction failed, falling back to regex", err);
-    return null;
+  const summaryParts: string[] = [];
+  if (power.feeders.length) {
+    summaryParts.push(
+      `${power.feeders.length} feeder(s)` + (totalMva ? ` · ${Math.round(totalMva * 100) / 100} MVA` : "")
+    );
   }
-}
+  if (power.trenchingFt !== null) summaryParts.push(`~${power.trenchingFt.toLocaleString()} ft trenching`);
+  if (peakDemand) summaryParts.push(`Peak demand ${peakDemand}`);
 
-/** Extract via LLM when available, else regex. */
-export async function extractNve(
-  text: string
-): Promise<{ fields: NveExtract; via: "llm" | "regex" }> {
-  const llm = await extractNveWithLLM(text);
-  if (llm) return { fields: llm, via: "llm" };
-  return { fields: extractNveRegex(text), via: "regex" };
+  return {
+    mwAvailable: maxMw(peakDemand) ?? maxMw(text),
+    isdDate: parseIsdToDate(isdRaw) || parseIsdToDate(text),
+    longLeadItems: extractLongLeadItems(text),
+    notes: summaryParts.join(" · "),
+    peakDemand,
+    feeders: power.feeders,
+    trenchingFt: power.trenchingFt,
+    substation: power.substation,
+  };
 }

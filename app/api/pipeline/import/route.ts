@@ -82,6 +82,12 @@ export async function POST(req: NextRequest) {
           ]),
           nveResponseRaw: pick(row, ["nve_response_raw", "NVE Response"]),
           mwAvailable,
+          peakDemand: pick(row, ["peak_demand", "Peak Demand", "peakDemand"]),
+          feeders: [],
+          trenchingFt: (() => {
+            const t = pick(row, ["trenching_ft", "Trenching Ft", "trenchingFt"]);
+            return t && Number.isFinite(Number(t)) ? Number(t) : null;
+          })(),
           isdDate,
           longLeadItems,
           longLeadPresent: longLeadItems.length > 0,
