@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Mic, Upload } from "lucide-react";
+import { Mic, Pencil, Trash2, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -118,6 +118,8 @@ export function LogCallForm({
   const [expandedTranscript, setExpandedTranscript] = useState<string | null>(null);
   const [transcriptEditId, setTranscriptEditId] = useState<string | null>(null);
   const [transcriptDraft, setTranscriptDraft] = useState("");
+  const [editCallId, setEditCallId] = useState<string | null>(null);
+  const [edit, setEdit] = useState({ outcome: "no_answer", calledAt: "", callbackAt: "", notes: "" });
   const fileRef = useRef<HTMLInputElement>(null);
 
   const showCallback = CALLBACK_OUTCOMES.has(outcome) || outcome === "callback_set";
@@ -263,6 +265,64 @@ export function LogCallForm({
         setTranscriptDraft("");
         onLogged({ call: result.call, calls: result.calls });
       }
+    } finally {
+      setPhase("idle");
+    }
+  }
+
+  function startEdit(c: CallRecord) {
+    setTranscriptEditId(null);
+    setEditCallId(c.callId);
+    setEdit({
+      outcome: c.outcome || "no_answer",
+      calledAt: toDatetimeLocalValue(c.calledAt),
+      callbackAt: toDatetimeLocalValue(c.callbackAt),
+      notes: c.notes || "",
+    });
+  }
+
+  async function saveEdit(callId: string) {
+    setPhase("saving");
+    try {
+      const res = await fetch("/api/calls", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          callId,
+          patch: {
+            outcome: edit.outcome,
+            calledAt: fromDatetimeLocalValue(edit.calledAt),
+            callbackAt: fromDatetimeLocalValue(edit.callbackAt),
+            notes: edit.notes,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Edit failed");
+      toast.success("Call updated");
+      setEditCallId(null);
+      const updated = (data.calls as CallRecord[]).find((c) => c.callId === callId);
+      onLogged({ call: updated || data.calls[0], calls: data.calls, leads: data.leads });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Edit failed");
+    } finally {
+      setPhase("idle");
+    }
+  }
+
+  async function removeCall(c: CallRecord) {
+    if (!confirm("Delete this call log entry? This can't be undone.")) return;
+    setPhase("saving");
+    try {
+      const res = await fetch(`/api/calls?callId=${encodeURIComponent(c.callId)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Delete failed");
+      toast.success("Call deleted");
+      onLogged({ call: c, calls: data.calls, leads: data.leads });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
     } finally {
       setPhase("idle");
     }
@@ -502,8 +562,61 @@ export function LogCallForm({
                   <span className="font-medium text-slate-900">
                     {outcomeLabel(c.outcome)}
                   </span>
-                  <span className="text-slate-500">{formatWhen(c.calledAt)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500">{formatWhen(c.calledAt)}</span>
+                    <button
+                      type="button"
+                      className="text-slate-400 hover:text-slate-700"
+                      title="Edit call"
+                      disabled={busy}
+                      onClick={() => (editCallId === c.callId ? setEditCallId(null) : startEdit(c))}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      className="text-slate-400 hover:text-rose-600"
+                      title="Delete call"
+                      disabled={busy}
+                      onClick={() => removeCall(c)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
+                {editCallId === c.callId ? (
+                  <div className="mt-2 space-y-2 rounded-lg border border-slate-200 bg-white p-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-[11px]">Outcome</Label>
+                        <Select value={edit.outcome} onValueChange={(v) => setEdit({ ...edit, outcome: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {CALL_OUTCOMES.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-[11px]">Called at</Label>
+                        <Input type="datetime-local" value={edit.calledAt} onChange={(e) => setEdit({ ...edit, calledAt: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label className="text-[11px]">Callback at</Label>
+                        <Input type="datetime-local" value={edit.callbackAt} onChange={(e) => setEdit({ ...edit, callbackAt: e.target.value })} />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-[11px]">Notes</Label>
+                      <Textarea rows={2} value={edit.notes} onChange={(e) => setEdit({ ...edit, notes: e.target.value })} />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" size="sm" variant="outline" onClick={() => setEditCallId(null)}>Cancel</Button>
+                      <Button type="button" size="sm" onClick={() => saveEdit(c.callId)} disabled={busy}>Save</Button>
+                    </div>
+                  </div>
+                ) : null}
                 {c.callbackAt ? (
                   <div className="mt-0.5 text-slate-500">
                     Callback: {formatWhen(c.callbackAt)}

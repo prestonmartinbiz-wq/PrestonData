@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { feedersToText, parseFeederText, type ParsedPower } from "@/lib/power";
+import type { PowerAvailability } from "@/lib/types";
 
 type Method = "eml" | "text" | "manual";
 
@@ -69,18 +70,22 @@ export function PowerForm({
   onSaved,
   title = "Add power data",
   defaultMethod = "eml",
+  initial,
 }: {
   defaultSubstation?: string;
   onSaved?: () => void;
   title?: string;
   defaultMethod?: Method;
+  /** When provided, edit this existing record in place instead of creating one. */
+  initial?: PowerAvailability;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [method, setMethod] = useState<Method>(defaultMethod);
-  const [form, setForm] = useState<FormState>({
-    ...EMPTY_FORM,
-    substation: defaultSubstation,
-  });
+  const [method, setMethod] = useState<Method>(initial ? "manual" : defaultMethod);
+  const [form, setForm] = useState<FormState>(
+    initial
+      ? fromParsed(initial, initial.substation)
+      : { ...EMPTY_FORM, substation: defaultSubstation }
+  );
   const [pasteText, setPasteText] = useState("");
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -153,15 +158,18 @@ export function PowerForm({
         emailDate: form.emailDate.trim(),
         sourceFile: form.sourceFile.trim(),
       };
+      const payload = initial
+        ? { item: { ...item, id: initial.id, createdAt: initial.createdAt } }
+        : { item };
       const res = await fetch("/api/power", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ item }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed");
-      toast.success(`Power added to ${data.added.substation}`);
-      setForm({ ...EMPTY_FORM, substation: defaultSubstation });
+      toast.success(initial ? "Power record updated" : `Power added to ${data.added.substation}`);
+      if (!initial) setForm({ ...EMPTY_FORM, substation: defaultSubstation });
       setPasteText("");
       onSaved?.();
     } catch (e) {
@@ -315,7 +323,7 @@ export function PowerForm({
 
       <div className="mt-4 flex justify-end">
         <Button onClick={save} disabled={saving}>
-          {saving ? "Saving…" : "Add power data"}
+          {saving ? "Saving…" : initial ? "Save changes" : "Add power data"}
         </Button>
       </div>
     </div>

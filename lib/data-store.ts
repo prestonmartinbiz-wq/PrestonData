@@ -241,6 +241,65 @@ export async function getCallById(callId: string): Promise<CallRecord | null> {
   return calls.find((c) => c.callId === callId) || null;
 }
 
+/** Edit a logged call (for corrections) and recompute the lead's rollups. */
+export async function updateCall(
+  callId: string,
+  patch: Partial<
+    Pick<
+      CallRecord,
+      | "outcome"
+      | "calledAt"
+      | "callbackAt"
+      | "notes"
+      | "contactName"
+      | "phoneUsed"
+      | "caller"
+      | "durationSec"
+    >
+  >,
+  who = "crm"
+): Promise<{ call: CallRecord; calls: CallRecord[]; leads: Lead[] }> {
+  const [{ calls }, { leads }] = await Promise.all([loadCalls(), loadLeads()]);
+  const idx = calls.findIndex((c) => c.callId === callId);
+  if (idx === -1) throw new Error("Call not found");
+
+  const next = [...calls];
+  next[idx] = { ...calls[idx], ...patch, callId, apn: calls[idx].apn };
+
+  const key = normalizeApn(calls[idx].apn);
+  const nextLeads = [...leads];
+  const leadIdx = nextLeads.findIndex((l) => normalizeApn(l.apn) === key);
+  if (leadIdx !== -1) nextLeads[leadIdx] = applyRollupsToLead(nextLeads[leadIdx], next);
+
+  await Promise.all([
+    saveCalls(next, `Edit call ${callId} (${who})`),
+    leadIdx !== -1 ? saveLeads(nextLeads, `Recompute rollups after call edit (${who})`) : Promise.resolve(undefined),
+  ]);
+  return { call: next[idx], calls: next, leads: nextLeads };
+}
+
+/** Delete a logged call (for corrections) and recompute the lead's rollups. */
+export async function deleteCall(
+  callId: string,
+  who = "crm"
+): Promise<{ calls: CallRecord[]; leads: Lead[] }> {
+  const [{ calls }, { leads }] = await Promise.all([loadCalls(), loadLeads()]);
+  const target = calls.find((c) => c.callId === callId);
+  if (!target) throw new Error("Call not found");
+
+  const next = calls.filter((c) => c.callId !== callId);
+  const key = normalizeApn(target.apn);
+  const nextLeads = [...leads];
+  const leadIdx = nextLeads.findIndex((l) => normalizeApn(l.apn) === key);
+  if (leadIdx !== -1) nextLeads[leadIdx] = applyRollupsToLead(nextLeads[leadIdx], next);
+
+  await Promise.all([
+    saveCalls(next, `Delete call ${callId} (${who})`),
+    leadIdx !== -1 ? saveLeads(nextLeads, `Recompute rollups after call delete (${who})`) : Promise.resolve(undefined),
+  ]);
+  return { calls: next, leads: nextLeads };
+}
+
 export async function loadTeam(): Promise<{ team: TeamData; meta: SaveMeta }> {
   if (hasGitHubToken()) {
     try {

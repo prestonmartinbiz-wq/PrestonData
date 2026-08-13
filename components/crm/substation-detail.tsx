@@ -4,9 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, Trash2, Zap } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { CrexiUpload } from "@/components/crm/crexi-upload";
 import { PowerForm } from "@/components/crm/power-form";
 import { GoogleMapEmbed } from "@/components/crm/google-map-embed";
@@ -33,10 +39,12 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 function PowerCard({
   record,
   onDelete,
+  onEdit,
   deleting,
 }: {
   record: PowerAvailability;
   onDelete: (id: string) => void;
+  onEdit: (record: PowerAvailability) => void;
   deleting: boolean;
 }) {
   return (
@@ -54,15 +62,25 @@ function PowerCard({
             </p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onDelete(record.id)}
-          disabled={deleting}
-          title="Remove"
-        >
-          <Trash2 className="h-4 w-4 text-slate-400" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onEdit(record)}
+            title="Edit"
+          >
+            <Pencil className="h-4 w-4 text-slate-400" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDelete(record.id)}
+            disabled={deleting}
+            title="Remove"
+          >
+            <Trash2 className="h-4 w-4 text-slate-400" />
+          </Button>
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -133,6 +151,7 @@ export function SubstationDetail({
 }) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingPower, setEditingPower] = useState<PowerAvailability | null>(null);
 
   async function deletePower(id: string) {
     if (!confirm("Remove this power-availability record?")) return;
@@ -229,6 +248,7 @@ export function SubstationDetail({
                 key={record.id}
                 record={record}
                 onDelete={deletePower}
+                onEdit={setEditingPower}
                 deleting={deletingId === record.id}
               />
             ))}
@@ -331,6 +351,23 @@ export function SubstationDetail({
         </div>
       </section>
 
+      <Dialog open={Boolean(editingPower)} onOpenChange={(o) => !o && setEditingPower(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit power record</DialogTitle>
+          </DialogHeader>
+          {editingPower ? (
+            <PowerForm
+              initial={editingPower}
+              title="Edit power data"
+              onSaved={() => {
+                setEditingPower(null);
+                router.refresh();
+              }}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

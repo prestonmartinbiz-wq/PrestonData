@@ -3,9 +3,12 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Bell, Check, Trash2 } from "lucide-react";
+import { Bell, Check, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { Task } from "@/lib/types";
 
 function formatWhen(iso: string): string {
@@ -13,6 +16,20 @@ function formatWhen(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString();
+}
+
+function toLocal(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fromLocal(local: string): string {
+  if (!local) return "";
+  const d = new Date(local);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString();
 }
 
 export function TasksPageClient({
@@ -26,6 +43,37 @@ export function TasksPageClient({
   const [scope, setScope] = useState<"mine" | "all">("mine");
   const [showDone, setShowDone] = useState(false);
   const [now] = useState(() => Date.now());
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState({ title: "", note: "", dueAt: "" });
+
+  function startEdit(t: Task) {
+    setEditId(t.id);
+    setEditDraft({ title: t.title, note: t.note, dueAt: toLocal(t.dueAt) });
+  }
+
+  async function saveEdit(id: string) {
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          patch: {
+            title: editDraft.title.trim(),
+            note: editDraft.note.trim(),
+            dueAt: fromLocal(editDraft.dueAt) || undefined,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setTasks((t) => t.map((x) => (x.id === id ? data.task : x)));
+      setEditId(null);
+      toast.success("Task updated");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    }
+  }
 
   const visible = useMemo(() => {
     const me = (currentUserEmail || "").toLowerCase();
@@ -114,6 +162,26 @@ export function TasksPageClient({
                       {t.propertyAddress ? ` · ${t.propertyAddress}` : ""}
                     </div>
                     {t.note ? <div className="mt-0.5 text-xs text-slate-600">{t.note}</div> : null}
+                    {editId === t.id ? (
+                      <div className="mt-2 space-y-2 rounded-lg border border-slate-200 bg-white p-2">
+                        <div>
+                          <Label className="text-[11px]">Title</Label>
+                          <Input value={editDraft.title} onChange={(e) => setEditDraft({ ...editDraft, title: e.target.value })} />
+                        </div>
+                        <div>
+                          <Label className="text-[11px]">Due</Label>
+                          <Input type="datetime-local" value={editDraft.dueAt} onChange={(e) => setEditDraft({ ...editDraft, dueAt: e.target.value })} />
+                        </div>
+                        <div>
+                          <Label className="text-[11px]">Note</Label>
+                          <Textarea rows={2} value={editDraft.note} onChange={(e) => setEditDraft({ ...editDraft, note: e.target.value })} />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button size="sm" variant="outline" onClick={() => setEditId(null)}>Cancel</Button>
+                          <Button size="sm" onClick={() => saveEdit(t.id)}>Save</Button>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -122,6 +190,9 @@ export function TasksPageClient({
                       <Link href={`/lead/${encodeURIComponent(t.apn)}`}>Open</Link>
                     </Button>
                   ) : null}
+                  <Button variant="ghost" size="icon" onClick={() => (editId === t.id ? setEditId(null) : startEdit(t))} title="Edit">
+                    <Pencil className="h-4 w-4 text-slate-400" />
+                  </Button>
                   {t.status === "open" ? (
                     <Button size="sm" onClick={() => setStatus(t.id, "done")}>
                       <Check className="h-4 w-4" /> Done
