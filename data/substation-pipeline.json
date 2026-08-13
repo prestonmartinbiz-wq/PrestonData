@@ -1,33 +1,6 @@
 {
   "items": [
     {
-      "id": "b5ce30bb-3f7b-4016-9c84-e3533dea53ff",
-      "name": "Persistence Test",
-      "address": "123 santa clause ln",
-      "latitude": "1111",
-      "longitude": "2222",
-      "status": "to_be_searched",
-      "submittedBy": "demo@local.dev",
-      "dateAdded": "2026-08-13T22:02:02.703Z",
-      "justification": "its good",
-      "priority": "Medium",
-      "assignedEe": "",
-      "dateStudySubmittedToNve": "",
-      "nveResponseRaw": "",
-      "mwAvailable": null,
-      "peakDemand": "",
-      "feeders": [],
-      "trenchingFt": null,
-      "isdDate": "",
-      "longLeadItems": [],
-      "longLeadPresent": false,
-      "compositeScore": null,
-      "dateResponseReceived": "",
-      "notes": "",
-      "createdAt": "2026-08-13T22:02:02.703Z",
-      "updatedAt": "2026-08-13T22:02:02.703Z"
-    },
-    {
       "id": "9490c2d8-ad51-49f9-a880-7b2ee3dea7c4",
       "name": "Polaris",
       "address": "4424 Polaris Ave",
