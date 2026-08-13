@@ -2,7 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Upload, Zap } from "lucide-react";
+import { Plus, Trash2, Upload, Zap } from "lucide-react";
+import { PipelineDetail } from "@/components/crm/pipeline-detail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,7 +69,21 @@ export function PipelineBoard({
   const [items, setItems] = useState<PipelineSubstation[]>(initialItems);
   const [tab, setTab] = useState<Tab>("tracked");
   const [now] = useState(() => Date.now());
+  const [detailItem, setDetailItem] = useState<PipelineSubstation | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
+
+  async function deleteItem(id: string) {
+    if (!confirm("Delete this substation from the pipeline?")) return;
+    try {
+      const res = await fetch(`/api/pipeline?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Delete failed");
+      setItems(data.items);
+      toast.success("Deleted");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
+    }
+  }
 
   // Intake
   const [intakeOpen, setIntakeOpen] = useState(false);
@@ -387,7 +402,11 @@ export function PipelineBoard({
                 {tracked.map((it, i) => {
                   const label = scoreLabel(it.compositeScore ?? 0);
                   return (
-                    <tr key={it.id} className="border-t border-slate-100">
+                    <tr
+                      key={it.id}
+                      className="cursor-pointer border-t border-slate-100 hover:bg-slate-50"
+                      onClick={() => setDetailItem(it)}
+                    >
                       <td className="px-3 py-2 tabular-nums text-slate-400">{i + 1}</td>
                       <td className="px-3 py-2 font-medium text-slate-900">{it.name}</td>
                       <td className="px-3 py-2 tabular-nums">
@@ -443,7 +462,11 @@ export function PipelineBoard({
           {interest.map((it) => {
             const days = daysSince(it.status === "to_be_searched" ? it.dateAdded : it.dateStudySubmittedToNve);
             return (
-              <div key={it.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div
+                key={it.id}
+                className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-slate-300"
+                onClick={() => setDetailItem(it)}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <div className="flex items-center gap-2">
@@ -463,14 +486,26 @@ export function PipelineBoard({
                     {it.assignedEe ? <div>EE: {it.assignedEe}</div> : null}
                     <div className="mt-2 flex justify-end gap-2">
                       {it.status === "to_be_searched" ? (
-                        <Button size="sm" variant="outline" onClick={() => openClaim(it)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => { e.stopPropagation(); openClaim(it); }}
+                        >
                           Claim &amp; submit
                         </Button>
                       ) : (
-                        <Button size="sm" onClick={() => openResponse(it)}>
+                        <Button size="sm" onClick={(e) => { e.stopPropagation(); openResponse(it); }}>
                           Upload NVE response
                         </Button>
                       )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => { e.stopPropagation(); deleteItem(it.id); }}
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4 text-slate-400" />
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -503,10 +538,23 @@ export function PipelineBoard({
                         : it.dateResponseReceived
                   );
                   return (
-                    <div key={it.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                    <div
+                      key={it.id}
+                      className="cursor-pointer rounded-lg border border-slate-200 bg-white p-3 shadow-sm hover:border-slate-300"
+                      onClick={() => setDetailItem(it)}
+                    >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium text-slate-900">{it.name}</span>
-                        <Badge className={priorityBadgeClass(it.priority)}>{it.priority}</Badge>
+                        <div className="flex items-center gap-1">
+                          <Badge className={priorityBadgeClass(it.priority)}>{it.priority}</Badge>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteItem(it.id); }}
+                            title="Delete"
+                            className="rounded p-1 text-slate-400 hover:bg-slate-100"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
                       <div className="mt-1 text-xs text-slate-500">
                         {days !== null ? `${days}d in status` : "—"}
@@ -523,11 +571,11 @@ export function PipelineBoard({
                       ) : (
                         <div className="mt-2">
                           {it.status === "to_be_searched" ? (
-                            <Button size="sm" variant="outline" onClick={() => openClaim(it)}>
+                            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); openClaim(it); }}>
                               Claim &amp; submit
                             </Button>
                           ) : (
-                            <Button size="sm" onClick={() => openResponse(it)}>
+                            <Button size="sm" onClick={(e) => { e.stopPropagation(); openResponse(it); }}>
                               Upload NVE response
                             </Button>
                           )}
@@ -620,6 +668,24 @@ export function PipelineBoard({
           </div>
         </DialogContent>
       </Dialog>
+
+      {detailItem ? (
+        <PipelineDetail
+          key={detailItem.id}
+          item={detailItem}
+          currentUser={currentUser}
+          onClose={() => setDetailItem(null)}
+          onUpdated={(next) => {
+            setItems(next);
+            const fresh = next.find((i) => i.id === detailItem.id);
+            setDetailItem(fresh || null);
+          }}
+          onDeleted={(id) => {
+            setItems((prev) => prev.filter((i) => i.id !== id));
+            setDetailItem(null);
+          }}
+        />
+      ) : null}
 
       {/* NVE response upload + review dialog */}
       <Dialog open={Boolean(respItem)} onOpenChange={(o) => !o && setRespItem(null)}>

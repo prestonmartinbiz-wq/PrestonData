@@ -101,6 +101,8 @@ export async function POST(req: NextRequest) {
               : null,
           dateResponseReceived: pick(row, ["date_response_received", "Date Response Received"]),
           notes: pick(row, ["notes", "Notes"]),
+          responses: [],
+          images: [],
           createdAt: now,
           updatedAt: now,
         };

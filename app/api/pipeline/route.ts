@@ -78,6 +78,8 @@ export async function POST(req: NextRequest) {
       compositeScore: null,
       dateResponseReceived: "",
       notes: (body.notes || "").trim(),
+      responses: [],
+      images: [],
       createdAt: now,
       updatedAt: now,
     });

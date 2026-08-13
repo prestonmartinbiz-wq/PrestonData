@@ -9,12 +9,19 @@
  * turn a coordinator's email into readable text we can scrape for power data.
  */
 
+export type EmlAttachment = {
+  filename: string;
+  contentType: string;
+  data: Buffer;
+};
+
 export type ParsedEmail = {
   headers: Record<string, string>;
   subject: string;
   date: string;
   from: string;
   text: string;
+  attachments: EmlAttachment[];
 };
 
 function unfoldHeaders(rawHeaders: string): Record<string, string> {
@@ -102,7 +109,20 @@ function getBoundary(contentType: string): string {
 
 type Part = { text: string; isHtml: boolean };
 
-function extractParts(body: string, contentType: string): Part[] {
+function filenameFrom(headers: Record<string, string>): string {
+  const cd = headers["content-disposition"] || "";
+  const ct = headers["content-type"] || "";
+  const m =
+    /name\*?=(?:"([^"]+)"|([^;]+))/i.exec(cd) ||
+    /name\*?=(?:"([^"]+)"|([^;]+))/i.exec(ct);
+  return m ? (m[1] || m[2] || "").trim() : "";
+}
+
+function extractParts(
+  body: string,
+  contentType: string,
+  attachments: EmlAttachment[]
+): Part[] {
   const boundary = getBoundary(contentType);
   if (!boundary) return [];
 
@@ -120,7 +140,26 @@ function extractParts(body: string, contentType: string): Part[] {
     const cte = headers["content-transfer-encoding"] || "";
 
     if (/multipart\//i.test(partType)) {
-      parts.push(...extractParts(partBody, partType));
+      parts.push(...extractParts(partBody, partType, attachments));
+      continue;
+    }
+
+    if (/^image\//i.test(partType)) {
+      if (/base64/i.test(cte)) {
+        try {
+          const cleaned = partBody.replace(/[^A-Za-z0-9+/=]/g, "");
+          const data = Buffer.from(cleaned, "base64");
+          if (data.length > 0) {
+            attachments.push({
+              filename: filenameFrom(headers) || `image.${(/image\/(\w+)/i.exec(partType) || [])[1] || "png"}`,
+              contentType: partType.split(";")[0].trim().toLowerCase(),
+              data,
+            });
+          }
+        } catch {
+          // ignore undecodable image part
+        }
+      }
       continue;
     }
 
@@ -151,9 +190,10 @@ export function parseEml(raw: string): ParsedEmail {
   const contentType = headers["content-type"] || "";
   const cte = headers["content-transfer-encoding"] || "";
 
+  const attachments: EmlAttachment[] = [];
   let text = "";
   if (/multipart\//i.test(contentType)) {
-    const parts = extractParts(body, contentType);
+    const parts = extractParts(body, contentType, attachments);
     const plain = parts.filter((p) => !p.isHtml).map((p) => p.text);
     if (plain.join("").trim()) {
       text = plain.join("\n\n");
@@ -180,5 +220,6 @@ export function parseEml(raw: string): ParsedEmail {
     date: headers["date"] || "",
     from: decodeHeaderValue(headers["from"] || ""),
     text: text.replace(/\r\n/g, "\n").trim(),
+    attachments,
   };
 }

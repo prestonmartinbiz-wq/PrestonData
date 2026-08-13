@@ -177,6 +177,25 @@ export type PipelineStatus =
 
 export type PipelinePriority = "High" | "Medium" | "Low";
 
+/** One NV Energy response ("pull") for a substation — a substation can have several. */
+export type PipelineResponse = {
+  id: string;
+  subject: string;
+  date: string;
+  from: string;
+  /** Full plain-text body of the email. */
+  text: string;
+  mwAvailable: number | null;
+  peakDemand: string;
+  isdDate: string;
+  feeders: Feeder[];
+  trenchingFt: number | null;
+  longLeadItems: string[];
+  /** Public URLs of diagram images extracted from the email. */
+  images: string[];
+  sourceFile: string;
+};
+
 export type PipelineSubstation = {
   id: string;
   name: string;
@@ -209,6 +228,10 @@ export type PipelineSubstation = {
   compositeScore: number | null;
   dateResponseReceived: string;
   notes: string;
+  /** All NVE response pulls for this substation (full text + images). */
+  responses: PipelineResponse[];
+  /** Aggregated diagram image URLs across all responses. */
+  images: string[];
   createdAt: string;
   updatedAt: string;
 };
