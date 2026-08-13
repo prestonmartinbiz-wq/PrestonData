@@ -6,26 +6,38 @@
       "address": "3560 W RUSSELL RD",
       "latitude": "36°05'12.2\"N",
       "longitude": "115°11'13.6\"W",
-      "status": "awaiting_nve_response",
+      "status": "confirmed",
       "submittedBy": "demo@local.dev",
       "dateAdded": "2026-08-13T22:34:34.055Z",
       "justification": "for Don Ahern we think there is power in this area",
       "priority": "High",
       "assignedEe": "prestonmartinbiz@gmail.com",
       "dateStudySubmittedToNve": "2026-08-04",
-      "nveResponseRaw": "",
-      "mwAvailable": null,
-      "peakDemand": "",
-      "feeders": [],
+      "nveResponseRaw": "CAUTION: This email originated from outside of the organization. Do not click links or open attachments unless you recognize the sender and know the content is safe.\n\nHi, Preston.\n\nNote, no capacity will be reserved for this project and the requirements to serve will be reevaluated and may be different following receipt of request for Binding Design/Formal Planning.\n\nWe reviewed:\n\nAPN: 16232203004, 5915 Dean Martin Dr. Las Vegas, NV  89118 United States\nISD: Q2 2027\nPower: 10 MW and 15 MW\n10 MW: Service to this project requires: Installation of a new Procyon-1217 feeder. One year lead time for circuit breaker. Also, requires a new bus section in substation planned for 6/1/2032. Substation buses typically have an 18 month lead time, so with the submission of a formal project you could bring the 2032 date in. Minimum requirements: install feeder breaker at [1]. Install switch and cap bank at [2]. 3,900 feet underground cable from [1] to [2]. Install switch and cap bank at [3]. 100 feet of underground cable from [2] to [3]. Serve at [2, 3].\n\n[cid:image003.png@01DD2B09.80D62200]\n\n15 MW: Two feeders, Pro-1217 (10 MW) and Pro-1211 (5 MW) feeders. New bus section also required. Similar to above, but with additional Pro-1211 requirements which are: switch at [4]. 200 feet of underground cable at [4], Switch and cap bank at [5]. 3,700 feet of underground cable from [4] to [5]. 200 feet underground cable from [5] to [3] to tie the feeders. Install any additional switches as required. Serve from [5].\n\n[cid:image004.png@01DD2B09.80D62200]\n\n\nThank you,\n\nChad Jacks | Business Development Manager\nCell: 702-885-8732 | Teams Phone: 702-402-3319 | Email: Chad.Jacks@nvenergy.com<mailto:Chad.Jacks@nvenergy.com>\n6226 W. Sahara Avenue | Las Vegas, NV 89146\n\n[cid:image001.png@01DD2B08.06A767B0]\n\nFrom: Jacks, Chad (NV Energy)\nSent: Tuesday, August 4, 2026 10:52 AM\nTo: 'Preston Martin' <preston.martin@lewismc.com>\nSubject: RE: [INTERNET] Enjoy your vacation I hear the que is empty- the joker\n\nSubmitted.\n\n\nThank you,\n\nChad Jacks | Business Development Manager\nCell: 702-885-8732 | Teams Phone: 702-402-3319 | Email: Chad.Jacks@nvenergy.com<mailto:Chad.Jacks@nvenergy.com>\n6226 W. Sahara Avenue | Las Vegas, NV 89146\n\n[cid:image001.png@01DD2B08.06A767B0]\n\nFrom: Preston Martin <preston.martin@lewismc.com<mailto:preston.martin@lewismc.com>>\nSent: Friday, July 24, 2026 11:37 AM\nTo: Jacks, Chad (NV Energy) <chad.jacks@nvenergy.com<mailto:chad.jacks@nvenergy.com>>\nSubject: [INTERNET] Enjoy your vacation I hear the que is empty- the joker\n\nTHIS MESSAGE IS FROM AN EXTERNAL SENDER.\nLook closely at the SENDER address. Do not open ATTACHMENTS unless expected. Check for INDICATORS of phishing. Hover over LINKS before clicking. Learn to spot a phishing message<http://aka.ms/LearnAboutSenderIdentification>\n\nAPN:\n16232203004\n\n5915 Dean Martin Dr\nLas Vegas, NV  89118\nUnited States\n\nISD: Q2 2027\n\nPower: 10mgs / 15mgs\n\n\n[Image removed by sender. photo]<https://linkprotect.cudasvc.com/url?a=http%3a%2f%2fwww.lewisgroupofcompanies.com%2f&c=E,1,XdfG8KM8RH3Q5RnnR12CBbEVClg_YUEXctNbCqOhQ_G2iy0AZeZRtj6fHet6biC4znsNUq-p_1YKiE0H8txeJM2xLqWGqIaF34ffd879cxA,&typo=1>\n\nPreston Martin\nManager - Land Acquisition NV\nLewis Management Corp.\n\nDirect: (702) 262-7309<tel:(702)%20262-7309>\n\npreston.martin@lewismc.com<mailto:preston.martin@lewismc.com>\n\n5240 S. Polaris Avenue Las Vegas NV 89118\n\nConfidentiality Notice: The information contained in this email and any attachments is intended only for the recipient and may be confidential and/or privileged. If you are not the intended recipient, any unauthorized use, disclosure, or copying is strictly prohibited and may be unlawful. If you have received this email in error, please immediately notify the sender by return email and delete the original message and all copies from your system. Thank you.\n\n[Image removed by sender. __tpx__]\n\n\nThis email, including attachments, may contain highly sensitive, confidential, proprietary or valuable information. It is intended only for the designated recipient(s) named above. Any unauthorized use, reproduction, forwarding or distribution of this transmission, including attachments, is prohibited. If you have received this communication in error, please immediately notify the sender and permanently delete any record of this transmission.",
+      "mwAvailable": 15,
+      "peakDemand": "10 MW and 15 MW",
+      "feeders": [
+        {
+          "id": "PRO-1211",
+          "mva": null
+        },
+        {
+          "id": "PRO-1217",
+          "mva": null
+        }
+      ],
       "trenchingFt": null,
-      "isdDate": "",
-      "longLeadItems": [],
-      "longLeadPresent": false,
-      "compositeScore": null,
-      "dateResponseReceived": "",
-      "notes": "",
+      "isdDate": "2027-04-01",
+      "longLeadItems": [
+        "One year lead time for circuit breaker.",
+        "Substation buses typically have an 18 month lead time, so with the submission of a formal project you could bring the 2032 date in."
+      ],
+      "longLeadPresent": true,
+      "compositeScore": 75,
+      "dateResponseReceived": "2026-08-13T22:35:16.631Z",
+      "notes": "2 feeder(s) · Peak demand 10 MW and 15 MW",
       "createdAt": "2026-08-13T22:34:34.055Z",
-      "updatedAt": "2026-08-13T22:34:56.805Z"
+      "updatedAt": "2026-08-13T22:35:16.631Z"
     },
     {
       "id": "7da49eca-c5db-4bb7-8948-6764f4dadcae",
