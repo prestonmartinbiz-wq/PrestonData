@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CrexiUpload } from "@/components/crm/crexi-upload";
 import { PowerForm } from "@/components/crm/power-form";
+import { GoogleMapEmbed } from "@/components/crm/google-map-embed";
 import type { Lead, PowerAvailability, TeamMember } from "@/lib/types";
 import { parseLeadMeta, type SubstationBucket } from "@/lib/substation";
 import { getPhones } from "@/lib/phones";
@@ -116,6 +117,9 @@ export function SubstationDetail({
   bucket,
   leads,
   power,
+  mapCenter,
+  mapQuery,
+  mapPoints = 0,
 }: {
   bucket: SubstationBucket;
   leads: Lead[];
@@ -123,6 +127,9 @@ export function SubstationDetail({
   team?: TeamMember[];
   currentUserEmail?: string;
   currentUserName?: string;
+  mapCenter?: { lat: number; lng: number } | null;
+  mapQuery?: string;
+  mapPoints?: number;
 }) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -190,6 +197,25 @@ export function SubstationDetail({
         <Stat label="Worked" value={`${bucket.workedPct}%`} />
         <Stat label="Feeder MVA" value={fmtMva(bucket.totalMva)} />
       </div>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Map
+          <span className="ml-2 font-normal normal-case text-slate-400">
+            {mapPoints
+              ? `centered on ${mapPoints} geocoded parcel${mapPoints === 1 ? "" : "s"}`
+              : "substation service area"}
+          </span>
+        </h2>
+        <GoogleMapEmbed
+          lat={mapCenter?.lat}
+          lng={mapCenter?.lng}
+          query={mapQuery}
+          zoom={mapPoints ? 13 : 12}
+          height={380}
+          label={`${bucket.name} map`}
+        />
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">

@@ -26,6 +26,29 @@ export default async function SubstationPage({
 
   const substationLeads = leadsForSlug(leads, slug, substations);
 
+  // Center the map on the parcels we have coordinates for (fallback to the
+  // substation's service area as a text query).
+  const coords = substationLeads
+    .map((l) => ({ lat: Number(l.latitude), lng: Number(l.longitude) }))
+    .filter((c) => Number.isFinite(c.lat) && Number.isFinite(c.lng) && c.lat !== 0);
+  const mapCenter = coords.length
+    ? {
+        lat: coords.reduce((s, c) => s + c.lat, 0) / coords.length,
+        lng: coords.reduce((s, c) => s + c.lng, 0) / coords.length,
+      }
+    : null;
+  // Fallback map query when we have no coordinates: prefer a real parcel address,
+  // then a cleaned-up service-area string, then the substation name.
+  const firstAddress = substationLeads.find((l) => (l.propertyAddress || "").trim())
+    ?.propertyAddress;
+  const cleanLocation = (bucket.location || "")
+    .replace(/^serves\s+/i, "")
+    .replace(/\s*\([^)]*\)\s*/g, " ")
+    .replace(/\s*—.*$/, "")
+    .trim();
+  const mapQuery =
+    firstAddress || cleanLocation || `${bucket.name} substation, Las Vegas NV`;
+
   return (
     <SubstationDetail
       bucket={bucket}
@@ -34,6 +57,9 @@ export default async function SubstationPage({
       team={team.members}
       currentUserEmail={user.email}
       currentUserName={user.fullName}
+      mapCenter={mapCenter}
+      mapQuery={mapQuery}
+      mapPoints={coords.length}
     />
   );
 }

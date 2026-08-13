@@ -18,6 +18,7 @@ import {
 import { LeadForm } from "@/components/crm/lead-form";
 import { LogCallForm } from "@/components/crm/log-call-form";
 import { PropertyLinks } from "@/components/crm/property-links";
+import { GoogleMapEmbed } from "@/components/crm/google-map-embed";
 import { ALLOWED_AUDIO_EXTENSIONS } from "@/lib/types";
 import type { CallRecord, Lead, Task, TeamMember } from "@/lib/types";
 import { getPhones } from "@/lib/phones";
@@ -399,6 +400,16 @@ export function LeadDetail({
                       propertyAddress={lead.propertyAddress}
                       lat={lead.latitude}
                       lng={lead.longitude}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <GoogleMapEmbed
+                      lat={Number.isFinite(Number(lead.latitude)) && Number(lead.latitude) !== 0 ? Number(lead.latitude) : undefined}
+                      lng={Number.isFinite(Number(lead.longitude)) && Number(lead.longitude) !== 0 ? Number(lead.longitude) : undefined}
+                      query={lead.propertyAddress}
+                      zoom={17}
+                      height={260}
+                      label={`${lead.apn} map`}
                     />
                   </div>
                 </div>
