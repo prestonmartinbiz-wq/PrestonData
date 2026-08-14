@@ -89,13 +89,13 @@
           "id": "d80ef7a3-b266-4152-906f-29313d92808b",
           "key": "single_line",
           "label": "Single Line Diagram",
-          "status": "needed",
+          "status": "received",
           "fileUrl": "",
           "fileName": "",
           "link": "",
           "note": "",
-          "updatedAt": "2026-08-14T20:00:39.599Z",
-          "updatedBy": ""
+          "updatedAt": "2026-08-14T20:01:55.205Z",
+          "updatedBy": "demo@local.dev"
         },
         {
           "id": "c1fc2215-f318-48b1-a1e3-076e914fd053",
@@ -125,7 +125,7 @@
       "milestones": [],
       "createdBy": "demo@local.dev",
       "createdAt": "2026-08-14T20:00:39.597Z",
-      "updatedAt": "2026-08-14T20:00:39.597Z"
+      "updatedAt": "2026-08-14T20:01:55.445Z"
     }
   ]
 }
