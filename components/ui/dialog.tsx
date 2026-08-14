@@ -24,15 +24,20 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 export const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    /** "drawer" (default) slides in from the right; "center" is a centered modal. */
+    variant?: "drawer" | "center";
+  }
+>(({ className, children, variant = "drawer", ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 grid w-full gap-4 border border-slate-200 bg-white p-6 shadow-lg duration-200",
-        "inset-y-0 right-0 h-full max-w-xl overflow-y-auto sm:rounded-l-xl",
+        "fixed z-50 grid gap-4 border border-slate-200 bg-white p-6 shadow-lg duration-200",
+        variant === "center"
+          ? "left-1/2 top-1/2 max-h-[90vh] w-[95vw] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl"
+          : "inset-y-0 right-0 h-full w-full max-w-xl overflow-y-auto sm:rounded-l-xl",
         className
       )}
       {...props}

@@ -253,7 +253,7 @@ export function PipelineDetail({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent variant="center" className="max-w-4xl">
         <DialogHeader>
           <div className="flex items-start justify-between gap-3 pr-6">
             <DialogTitle className="flex flex-wrap items-center gap-2">
@@ -366,14 +366,10 @@ export function PipelineDetail({
                 </div>
               ) : null}
 
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-                <Field label="Priority">{item.priority}</Field>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
                 <Field label="MW available">{item.mwAvailable ?? "—"}</Field>
                 <Field label="ISD">{item.isdDate ? fmtDate(item.isdDate) : "—"}</Field>
-                <Field label="Peak demand">{item.peakDemand || "—"}</Field>
-                <Field label="Trenching">
-                  {item.trenchingFt != null ? `${item.trenchingFt.toLocaleString()} ft` : "—"}
-                </Field>
+                <Field label="Priority">{item.priority}</Field>
                 <Field label="Long lead">
                   {item.longLeadPresent ? (
                     <Badge className="border-rose-200 bg-rose-50 text-rose-700">Long lead</Badge>
@@ -381,8 +377,22 @@ export function PipelineDetail({
                     "None"
                   )}
                 </Field>
+                <Field label="Peak demand">{item.peakDemand || "—"}</Field>
+                <Field label="Trenching">
+                  {item.trenchingFt != null ? `${item.trenchingFt.toLocaleString()} ft` : "—"}
+                </Field>
+                <Field label="NVE pulls">{(item.responses || []).length}</Field>
+                <Field label="Composite score">{item.compositeScore ?? "—"}</Field>
+                {item.address ? <Field label="Address">{item.address}</Field> : null}
                 {item.assignedEe ? <Field label="Assigned EE">{item.assignedEe}</Field> : null}
                 {item.submittedBy ? <Field label="Submitted by">{item.submittedBy}</Field> : null}
+                {item.dateAdded ? <Field label="Date added">{fmtDate(item.dateAdded)}</Field> : null}
+                {item.dateStudySubmittedToNve ? (
+                  <Field label="Study submitted">{fmtDate(item.dateStudySubmittedToNve)}</Field>
+                ) : null}
+                {item.dateResponseReceived ? (
+                  <Field label="Response received">{fmtDate(item.dateResponseReceived)}</Field>
+                ) : null}
               </div>
 
               {item.feeders && item.feeders.length ? (
