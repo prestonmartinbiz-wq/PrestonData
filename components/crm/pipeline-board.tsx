@@ -138,6 +138,8 @@ export function PipelineBoard({
     isdDate: string;
     feeders: { id: string; mva: number | null }[];
     peakDemand: string;
+    substation: string;
+    notes: string;
   } | null>(null);
   const [preqDropping, setPreqDropping] = useState(false);
   const [preqSaving, setPreqSaving] = useState(false);
@@ -410,7 +412,14 @@ export function PipelineBoard({
         isdDate: data.fields.isdDate || "",
         feeders: data.fields.feeders || [],
         peakDemand: data.fields.peakDemand || "",
+        substation: data.fields.substation || "",
+        notes: data.fields.notes || "",
       });
+      // Nudge the user to file it under the substation the email actually names
+      // (feeders come from there), which may differ from the site's address.
+      if (data.fields.substation && preqMode === "new" && !preqNewName.trim()) {
+        setPreqNewName(data.fields.substation);
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not read the file");
     }
@@ -1254,11 +1263,27 @@ export function PipelineBoard({
             {preqPreview ? (
               <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
                 <div className="font-medium text-slate-700">Pulled from email</div>
+                {preqPreview.substation ? (
+                  <div className="mt-1">
+                    Detected substation:{" "}
+                    <span className="font-medium text-slate-800">
+                      {preqPreview.substation}
+                    </span>{" "}
+                    <span className="text-slate-400">
+                      (power comes from here — may differ from the site address)
+                    </span>
+                  </div>
+                ) : null}
                 <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
                   {preqPreview.mwAvailable !== null ? <span>MW: {preqPreview.mwAvailable}</span> : null}
                   {preqPreview.isdDate ? <span>ISD: {fmtDate(preqPreview.isdDate)}</span> : null}
                   {preqPreview.peakDemand ? <span>Peak: {preqPreview.peakDemand}</span> : null}
                 </div>
+                {preqPreview.notes && /Excluded/.test(preqPreview.notes) ? (
+                  <div className="mt-1 rounded bg-amber-50 px-2 py-1 text-amber-800">
+                    {preqPreview.notes.split(" · ").filter((s) => /Excluded/.test(s)).join(" · ")}
+                  </div>
+                ) : null}
                 {preqPreview.feeders.length ? (
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {preqPreview.feeders.map((f) => (

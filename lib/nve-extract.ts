@@ -75,18 +75,42 @@ export function rejectedMwValues(text: string): Set<number> {
 }
 
 /**
+ * MW/MVA scenarios that require disqualifying work — an additional feeder or
+ * long-haul (miles of) trenching. When an email offers a CHOICE (e.g. "5 MW and
+ * 8 MW" where the 8 MW option needs "an additional feeder and 1.2 miles of
+ * trenching"), the heavy option is not real available capacity for us and must
+ * not be counted. We tie the number to the disqualifier that follows it.
+ */
+export function heavyScenarioValues(text: string): Set<number> {
+  const heavy = new Set<number>();
+  const re =
+    /(\d+(?:\.\d+)?)\s*(?:MW|MVA)\b[\s\S]{0,160}?(?:\d+(?:\.\d+)?\s*miles|additional\s+feeders?)/gi;
+  for (const m of (text || "").matchAll(re)) {
+    const v = parseFloat(m[1]);
+    if (Number.isFinite(v)) heavy.add(v);
+  }
+  return heavy;
+}
+
+/**
  * Available MW for a single response, read ONLY from the labeled request lines
  * ("Power:", "Peak Demand:", "Peak Demands:", "Load:") — never from stray
- * numbers elsewhere (equipment ratings, quoted threads, subject lines). Within
- * a line, several scenarios like "10 MW and 20 MW" mean the MAX serviceable
- * value (20), not the sum — they draw from the same feeders. Explicitly rejected
- * scenarios (transmission study / no review) are dropped. Returns null when the
- * response has no labeled serviceable figure (the reviewer can fill it in).
+ * numbers elsewhere (equipment ratings, quoted threads, subject lines).
+ *
+ * Scenario handling when a line lists several options ("5 MW and 8 MW"):
+ *  - explicitly rejected scenarios (transmission study / no review) are dropped;
+ *  - when there is a CHOICE, options requiring disqualifying work (an additional
+ *    feeder or miles of trenching) are dropped too, so we take the largest
+ *    *viable* option — not the largest option;
+ *  - "10 MW and 20 MW" with no disqualifier still resolves to 20 (max).
+ *
+ * Returns null when there is no labeled serviceable figure (reviewer fills in).
  */
 export function extractAvailableMw(text: string): number | null {
   const src = text || "";
   const rejected = rejectedMwValues(src);
-  const candidates: number[] = [];
+  const heavy = heavyScenarioValues(src);
+  let candidates: number[] = [];
   // Require a colon after the label so subject lines like "RE: Power request"
   // (which have no colon) are ignored.
   const lineRe = /\b(?:Peak\s+Demands?|Power|Load)\s*:\s*([^\n\r]+)/gi;
@@ -98,6 +122,12 @@ export function extractAvailableMw(text: string): number | null {
       const v = parseFloat(n[1]);
       if (Number.isFinite(v) && v > 0 && !rejected.has(v)) candidates.push(v);
     }
+  }
+  // Only drop heavy options when there's an actual choice; a lone stated value
+  // is kept even if the write-up mentions trenching.
+  if (candidates.length > 1) {
+    const viable = candidates.filter((v) => !heavy.has(v));
+    if (viable.length) candidates = viable;
   }
   return candidates.length ? Math.max(...candidates) : null;
 }
@@ -143,6 +173,8 @@ export function extractNve(text: string): NveExtract {
     .filter((v): v is number => v !== null)
     .reduce((a, b) => a + b, 0);
 
+  const mwAvailable = extractAvailableMw(text);
+
   const summaryParts: string[] = [];
   if (power.feeders.length) {
     summaryParts.push(
@@ -151,9 +183,19 @@ export function extractNve(text: string): NveExtract {
   }
   if (power.trenchingFt !== null) summaryParts.push(`~${power.trenchingFt.toLocaleString()} ft trenching`);
   if (peakDemand) summaryParts.push(`Peak demand ${peakDemand}`);
+  // Flag any higher scenario we excluded (needs an extra feeder / miles of
+  // trenching) so it's clear why available MW isn't the biggest number stated.
+  const droppedHeavy = [...heavyScenarioValues(text)].filter(
+    (v) => v > (mwAvailable ?? 0)
+  );
+  if (droppedHeavy.length) {
+    summaryParts.push(
+      `Excluded ${Math.max(...droppedHeavy)} MW option (needs additional feeder / miles of trenching)`
+    );
+  }
 
   return {
-    mwAvailable: extractAvailableMw(text),
+    mwAvailable,
     isdDate: parseIsdToDate(isdRaw) || parseIsdToDate(text),
     longLeadItems: extractLongLeadItems(text),
     notes: summaryParts.join(" · "),

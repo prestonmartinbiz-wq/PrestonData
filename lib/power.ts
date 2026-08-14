@@ -57,7 +57,7 @@ function extractSubstation(text: string): string {
 }
 
 function extractApn(text: string): string {
-  const m = /\bAPN:?\s*[\n\r]*\s*([0-9]{6,})/i.exec(text);
+  const m = /\b(?:APN|Parcel)\s*:?\s*[\n\r]*\s*([0-9]{6,})/i.exec(text);
   return m ? m[1].trim() : "";
 }
 
@@ -134,12 +134,27 @@ function extractFeeders(text: string): Feeder[] {
 function extractTrenching(text: string): { total: number | null; segments: number } {
   let total = 0;
   let segments = 0;
-  const re = /([\d,]+)\s*ft\s+of\s+trenching/gi;
+  // Match trenching in feet, both "3,000 ft of trenching" and "300 feet of
+  // trenching". Trenching stated in miles is the long-haul (heavy) option we
+  // exclude from viable capacity, so it is intentionally NOT summed here.
+  const re = /([\d,]+)\s*(?:ft|feet|foot|')\s+of\s+trenching/gi;
   for (const m of text.matchAll(re)) {
     const n = parseInt(m[1].replace(/,/g, ""), 10);
     if (Number.isFinite(n)) {
       total += n;
       segments += 1;
+    }
+  }
+  // Also catch "300 feet of trenching" phrased as "trenching ... 300 feet".
+  const re2 = /trenching[^.\n]{0,40}?([\d,]+)\s*(?:ft|feet|foot|')\b/gi;
+  for (const m of text.matchAll(re2)) {
+    const n = parseInt(m[1].replace(/,/g, ""), 10);
+    if (Number.isFinite(n) && n !== 0) {
+      // avoid double counting the "N ft of trenching" form already handled
+      if (!new RegExp(`${m[1]}\\s*(?:ft|feet|foot|')\\s+of\\s+trenching`, "i").test(text)) {
+        total += n;
+        segments += 1;
+      }
     }
   }
   return { total: segments ? total : null, segments };

@@ -1,7 +1,33 @@
 import { describe, expect, test } from "bun:test";
-import { extractAvailableMw, rejectedMwValues } from "@/lib/nve-extract";
+import {
+  extractAvailableMw,
+  extractNve,
+  heavyScenarioValues,
+  rejectedMwValues,
+} from "@/lib/nve-extract";
 import { applyResponse, mergeFeeders, rollupAvailableMw } from "@/lib/pipeline";
 import type { PipelineResponse, PipelineSubstation } from "@/lib/types";
+
+// The "teaching" email: 5 MW is viable on-site (300 ft), 8 MW needs an extra
+// feeder + 1.2 miles of trenching (we don't want it). Power is from Tam, not
+// the Sahara site address.
+const SAHARA_EMAIL = `Hi, Preston.
+
+We reviewed:
+
+Parcel: 16208103001, 3325 W Sahara Ave.
+Power: 5 MW and 8 MW
+ISD: Q3 2027
+
+For 5 MVA: 2 feeders from Tam substation.
+TA1205: 2 MVA: Install a switch at [1], 300 feet of trenching at same location to intercept existing cable. Install any additional switches as required. Serve from source at [1].
+TA1210: 3 MVA: install any switches as required. Serve from source at [2].
+This could be energized within NVE's standard construction timeframe. This is spreadsheet worthy.
+
+8 MVA: above, additional feeder, and 1.2 miles of trenching, etc.
+
+Thank you,
+Chad Jacks | NV Energy`;
 
 function pull(over: Partial<PipelineResponse>): PipelineResponse {
   return {
@@ -78,6 +104,34 @@ describe("extractAvailableMw", () => {
       extractAvailableMw("the 40 MW is 10 pages long. Quick 40 MW rundown: 4 feeders")
     ).toBeNull();
     expect(extractAvailableMw("a 40 MVA transformer with a 3 year lead time")).toBeNull();
+  });
+});
+
+describe("viable-scenario selection (Sahara / Tam teaching email)", () => {
+  test("drops the heavy option: 5 MW and 8 MW -> 5 (8 needs extra feeder + miles)", () => {
+    expect(heavyScenarioValues(SAHARA_EMAIL).has(8)).toBe(true);
+    expect(extractAvailableMw(SAHARA_EMAIL)).toBe(5);
+  });
+
+  test("attributes power to Tam substation (feeders), not the Sahara site", () => {
+    const nve = extractNve(SAHARA_EMAIL);
+    expect(nve.substation).toBe("Tam");
+    expect(nve.feeders.map((f) => f.id)).toContain("TA-1205");
+    expect(nve.feeders.map((f) => f.id)).toContain("TA-1210");
+  });
+
+  test("captures only the viable 300 ft trench, not the 1.2 mile option", () => {
+    expect(extractNve(SAHARA_EMAIL).trenchingFt).toBe(300);
+  });
+
+  test("mwAvailable is 5 and notes explain the 8 MW exclusion", () => {
+    const nve = extractNve(SAHARA_EMAIL);
+    expect(nve.mwAvailable).toBe(5);
+    expect(nve.notes).toMatch(/Excluded 8 MW/);
+  });
+
+  test("a lone stated value is kept even if trenching is mentioned", () => {
+    expect(extractAvailableMw("Power: 8 MW\n8 MVA: 1.2 miles of trenching")).toBe(8);
   });
 });
 
