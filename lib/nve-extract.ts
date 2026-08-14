@@ -181,7 +181,16 @@ export function extractNve(text: string): NveExtract {
       `${power.feeders.length} feeder(s)` + (totalMva ? ` · ${Math.round(totalMva * 100) / 100} MVA` : "")
     );
   }
-  if (power.trenchingFt !== null) summaryParts.push(`~${power.trenchingFt.toLocaleString()} ft trenching`);
+  if (power.trenchingFt !== null) {
+    const t = power.trenchingFt;
+    summaryParts.push(
+      t === 0
+        ? "no trenching (on-site)"
+        : t <= 500
+          ? `~${t.toLocaleString()} ft trenching (minimal, on-site)`
+          : `~${t.toLocaleString()} ft trenching`
+    );
+  }
   if (peakDemand) summaryParts.push(`Peak demand ${peakDemand}`);
   // Flag any higher scenario we excluded (needs an extra feeder / miles of
   // trenching) so it's clear why available MW isn't the biggest number stated.

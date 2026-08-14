@@ -64,6 +64,13 @@ function fmtDate(iso: string): string {
   return d.toLocaleDateString();
 }
 
+/** Describe the viable option's trench run in plain terms. */
+function trenchLabel(ft: number | null): string {
+  if (ft === null || ft === 0) return "no trenching — on-site";
+  if (ft <= 500) return `~${ft.toLocaleString()} ft trenching — minimal, on-site`;
+  return `~${ft.toLocaleString()} ft trenching`;
+}
+
 export function PipelineBoard({
   initialItems,
   currentUser,
@@ -140,6 +147,7 @@ export function PipelineBoard({
     peakDemand: string;
     substation: string;
     notes: string;
+    trenchingFt: number | null;
   } | null>(null);
   const [preqDropping, setPreqDropping] = useState(false);
   const [preqSaving, setPreqSaving] = useState(false);
@@ -414,6 +422,7 @@ export function PipelineBoard({
         peakDemand: data.fields.peakDemand || "",
         substation: data.fields.substation || "",
         notes: data.fields.notes || "",
+        trenchingFt: data.fields.trenchingFt ?? null,
       });
       // Nudge the user to file it under the substation the email actually names
       // (feeders come from there), which may differ from the site's address.
@@ -1275,10 +1284,17 @@ export function PipelineBoard({
                   </div>
                 ) : null}
                 <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                  {preqPreview.mwAvailable !== null ? <span>MW: {preqPreview.mwAvailable}</span> : null}
                   {preqPreview.isdDate ? <span>ISD: {fmtDate(preqPreview.isdDate)}</span> : null}
-                  {preqPreview.peakDemand ? <span>Peak: {preqPreview.peakDemand}</span> : null}
+                  {preqPreview.peakDemand ? <span>Requested: {preqPreview.peakDemand}</span> : null}
                 </div>
+                {preqPreview.mwAvailable !== null ? (
+                  <div className="mt-1 rounded bg-emerald-50 px-2 py-1 text-emerald-800">
+                    Viable: <span className="font-semibold">{preqPreview.mwAvailable} MW</span>
+                    {" · "}
+                    {trenchLabel(preqPreview.trenchingFt)}
+                    {" — works for this site"}
+                  </div>
+                ) : null}
                 {preqPreview.notes && /Excluded/.test(preqPreview.notes) ? (
                   <div className="mt-1 rounded bg-amber-50 px-2 py-1 text-amber-800">
                     {preqPreview.notes.split(" · ").filter((s) => /Excluded/.test(s)).join(" · ")}
