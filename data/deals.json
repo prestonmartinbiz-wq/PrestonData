@@ -1,3 +1,131 @@
 {
-  "items": []
+  "items": [
+    {
+      "id": "cc45c668-33d9-44d2-a99f-6b7d23fe5079",
+      "name": "Ahern Sahara",
+      "type": "landowner_relationship",
+      "stage": "power_reservation",
+      "apn": "16208103004",
+      "address": "3325 W Sahara Ave, Las Vegas, NV 89102",
+      "substation": "Sahara",
+      "mw": 5,
+      "summary": "Submitted to project portal awaiting being assigned a coordinator",
+      "keyDate": "2026-08-14",
+      "contacts": [],
+      "documents": [
+        {
+          "id": "19a9090d-8ae0-41ab-b32b-38bfc03b4f34",
+          "key": "contract",
+          "label": "Landowner agreement / contract",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T20:18:58.977Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "22c05e27-dc87-4b57-b439-550975bf794e",
+          "key": "site_plan",
+          "label": "Site plan (with panel location marked)",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T20:18:58.977Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "c3e81610-4f1f-430a-bf01-d6f07608db0a",
+          "key": "civil_dwg",
+          "label": "Civil Improvement Plans (.dwg CAD Files)",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T20:18:58.977Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "1b567c3e-b66c-4884-bc9c-21691bf3cb4c",
+          "key": "civil_pdf",
+          "label": "Civil Improvement Plans (PDF)",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T20:18:58.977Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "c500a473-0c53-48c8-a046-3451ff1eeeab",
+          "key": "electrical_site_plan",
+          "label": "Electrical Site Plan",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T20:18:58.977Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "502c2e2f-75a7-419c-af95-7e4b470fb924",
+          "key": "building_electrical",
+          "label": "Building Electrical Plans",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T20:18:58.977Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "9fd9bf15-8386-43fe-8153-150cf9bd04b9",
+          "key": "single_line",
+          "label": "Single Line Diagram",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T20:18:58.977Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "f82e6cbc-9dd0-4e29-b9b9-e3eb5e10f7f5",
+          "key": "load_calc",
+          "label": "Load Calculation Sheet",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T20:18:58.977Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "824bdd23-d558-42b4-a8c1-6a8736a700eb",
+          "key": "equipment_schedule",
+          "label": "Equipment Schedule",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T20:18:58.977Z",
+          "updatedBy": ""
+        }
+      ],
+      "milestones": [],
+      "createdBy": "demo@local.dev",
+      "createdAt": "2026-08-14T20:18:58.975Z",
+      "updatedAt": "2026-08-14T20:18:58.975Z"
+    }
+  ]
 }
