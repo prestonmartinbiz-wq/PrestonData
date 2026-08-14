@@ -8,10 +8,10 @@
       "note": "",
       "dueAt": "2026-08-14T00:57:35.210Z",
       "assignedTo": "demo@local.dev",
-      "status": "open",
+      "status": "done",
       "createdBy": "demo@local.dev",
       "createdAt": "2026-08-13T23:57:47.002Z",
-      "completedAt": ""
+      "completedAt": "2026-08-14T00:06:31.988Z"
     }
   ]
 }
