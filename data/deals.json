@@ -127,13 +127,13 @@
           "id": "ee8d2d44-cc50-4ef1-adf3-c7eedd4a1332",
           "title": "hi",
           "dueAt": "",
-          "doneAt": "",
+          "doneAt": "2026-08-14T21:09:49.446Z",
           "note": ""
         }
       ],
       "createdBy": "demo@local.dev",
       "createdAt": "2026-08-14T20:18:58.975Z",
-      "updatedAt": "2026-08-14T21:09:46.971Z"
+      "updatedAt": "2026-08-14T21:09:49.683Z"
     }
   ]
 }
