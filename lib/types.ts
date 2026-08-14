@@ -257,6 +257,135 @@ export type PipelineData = {
 
 export const PIPELINE_PRIORITIES: PipelinePriority[] = ["High", "Medium", "Low"];
 
+/* ------------------------------------------------------------------ *
+ * Live deal tracking
+ * ------------------------------------------------------------------ */
+
+/**
+ * How we control the site. "under_contract" deals (a signed PSA) carry harder
+ * due dates; "landowner_relationship" deals (owner lets us do the work) are
+ * softer and may or may not have a contract.
+ */
+export type DealType = "under_contract" | "landowner_relationship";
+
+export const DEAL_TYPES: { value: DealType; label: string }[] = [
+  { value: "under_contract", label: "Under contract (PSA)" },
+  { value: "landowner_relationship", label: "Landowner relationship" },
+];
+
+export type DealStage =
+  | "prospecting"
+  | "negotiating"
+  | "secured"
+  | "power_reservation"
+  | "design"
+  | "submitted"
+  | "closed"
+  | "dead";
+
+export const DEAL_STAGES: { value: DealStage; label: string }[] = [
+  { value: "prospecting", label: "Prospecting" },
+  { value: "negotiating", label: "Negotiating" },
+  { value: "secured", label: "Secured (control)" },
+  { value: "power_reservation", label: "Power reservation" },
+  { value: "design", label: "Design / documentation" },
+  { value: "submitted", label: "Submitted to NVE" },
+  { value: "closed", label: "Closed" },
+  { value: "dead", label: "Dead" },
+];
+
+export type DealContact = {
+  id: string;
+  name: string;
+  role: string;
+  company: string;
+  phone: string;
+  email: string;
+  notes: string;
+};
+
+export type DealDocStatus =
+  | "needed"
+  | "in_progress"
+  | "received"
+  | "submitted"
+  | "na";
+
+export const DEAL_DOC_STATUSES: { value: DealDocStatus; label: string }[] = [
+  { value: "needed", label: "Needed" },
+  { value: "in_progress", label: "In progress" },
+  { value: "received", label: "Received" },
+  { value: "submitted", label: "Submitted" },
+  { value: "na", label: "N/A" },
+];
+
+/**
+ * The documentation checklist NVE power reservations generally require. Not all
+ * apply to every deal (each can be marked N/A). A file can be uploaded (when
+ * object storage is available) or an external link (e.g. Google Drive) recorded.
+ */
+export const DEAL_DOC_CHECKLIST: { key: string; label: string }[] = [
+  { key: "site_plan", label: "Site plan (with panel location marked)" },
+  { key: "civil_dwg", label: "Civil Improvement Plans (.dwg CAD Files)" },
+  { key: "civil_pdf", label: "Civil Improvement Plans (PDF)" },
+  { key: "electrical_site_plan", label: "Electrical Site Plan" },
+  { key: "building_electrical", label: "Building Electrical Plans" },
+  { key: "single_line", label: "Single Line Diagram" },
+  { key: "load_calc", label: "Load Calculation Sheet" },
+  { key: "equipment_schedule", label: "Equipment Schedule" },
+];
+
+export type DealDocument = {
+  id: string;
+  /** Checklist key (see DEAL_DOC_CHECKLIST), "psa", "contract", or "other". */
+  key: string;
+  label: string;
+  status: DealDocStatus;
+  /** Stored file URL (blob/local) when a file was uploaded. */
+  fileUrl: string;
+  fileName: string;
+  /** External link alternative to an upload (e.g. Google Drive). */
+  link: string;
+  note: string;
+  updatedAt: string;
+  updatedBy: string;
+};
+
+export type DealMilestone = {
+  id: string;
+  title: string;
+  dueAt: string;
+  doneAt: string;
+  note: string;
+};
+
+export type Deal = {
+  id: string;
+  name: string;
+  type: DealType;
+  stage: DealStage;
+  apn: string;
+  address: string;
+  /** Substation the power is expected from (links to the pipeline/board). */
+  substation: string;
+  /** Target/requested MW for the deal. */
+  mw: number | null;
+  /** High-level description of the deal. */
+  summary: string;
+  /** Key/critical date (e.g. PSA contingency or close-of-escrow deadline). */
+  keyDate: string;
+  contacts: DealContact[];
+  documents: DealDocument[];
+  milestones: DealMilestone[];
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DealsData = {
+  items: Deal[];
+};
+
 export type TeamData = {
   members: TeamMember[];
 };

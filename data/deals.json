@@ -1,0 +1,141 @@
+{
+  "items": [
+    {
+      "id": "42e9f340-b075-4072-b8af-0f488fbc4651",
+      "name": "ZZ Test Deal - 5375 Procyon",
+      "type": "under_contract",
+      "stage": "power_reservation",
+      "apn": "16229301008",
+      "address": "5375 PROCYON ST LAS VEGAS NV 89118",
+      "substation": "Procyon",
+      "mw": 20,
+      "summary": "Under contract, working power reservation with NVE.",
+      "keyDate": "2026-10-01",
+      "contacts": [
+        {
+          "id": "c1",
+          "name": "Jack Lasky",
+          "role": "Owner",
+          "company": "LM Construction",
+          "phone": "702-262-6032",
+          "email": "jack@lm.com",
+          "notes": "decision maker"
+        }
+      ],
+      "documents": [
+        {
+          "id": "76bda0e2-12fb-4449-a2d9-7c29c40fdd72",
+          "key": "psa",
+          "label": "Purchase & Sale Agreement (PSA)",
+          "status": "received",
+          "fileUrl": "/deal-docs/42e9f340-b075-4072-b8af-0f488fbc4651/psa-test-psa.pdf",
+          "fileName": "test-psa.pdf",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:16:45.858Z",
+          "updatedBy": "demo@local.dev"
+        },
+        {
+          "id": "ace5e206-29b6-4d83-b039-de9c9cae17e7",
+          "key": "site_plan",
+          "label": "Site plan (with panel location marked)",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:16:44.818Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "4b6a15ea-c0fb-4fb4-9dc9-4f34e1a352b7",
+          "key": "civil_dwg",
+          "label": "Civil Improvement Plans (.dwg CAD Files)",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:16:44.818Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "a638b4c7-ea9d-4eeb-9926-4edb713319e5",
+          "key": "civil_pdf",
+          "label": "Civil Improvement Plans (PDF)",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:16:44.818Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "dedc3fa9-d39e-4fcc-8f7f-082f353545f4",
+          "key": "electrical_site_plan",
+          "label": "Electrical Site Plan",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:16:44.818Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "568931b3-649b-427c-ae3b-fc2250654f2b",
+          "key": "building_electrical",
+          "label": "Building Electrical Plans",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:16:44.818Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "d2625297-84f3-4a59-8416-28e96e18e969",
+          "key": "single_line",
+          "label": "Single Line Diagram",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:16:44.818Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "9293da2b-ca23-4863-b2ea-842066e8da0f",
+          "key": "load_calc",
+          "label": "Load Calculation Sheet",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:16:44.818Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "7f9d7e85-2b4d-45d1-bbb8-c82003c9a478",
+          "key": "equipment_schedule",
+          "label": "Equipment Schedule",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:16:44.818Z",
+          "updatedBy": ""
+        }
+      ],
+      "milestones": [],
+      "createdBy": "demo@local.dev",
+      "createdAt": "2026-08-14T19:16:44.817Z",
+      "updatedAt": "2026-08-14T19:16:45.858Z"
+    }
+  ]
+}

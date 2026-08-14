@@ -10,6 +10,8 @@ import { callsToCsv, leadsToCsv, parseCallsCsv, parseLeadsCsv } from "@/lib/csv"
 import { hasGitHubToken, readGitHubFile, writeGitHubFile } from "@/lib/github";
 import type {
   CallRecord,
+  Deal,
+  DealsData,
   Lead,
   PowerAvailability,
   PowerData,
@@ -31,6 +33,7 @@ const POWER_PATH = "data/power.json";
 const SUBSTATIONS_PATH = "data/substations.json";
 const TASKS_PATH = "data/tasks.json";
 const PIPELINE_PATH = "data/substation-pipeline.json";
+const DEALS_PATH = "data/deals.json";
 
 function localPath(rel: string) {
   // Scope to data/ so Turbopack does not trace the whole project
@@ -512,6 +515,29 @@ export async function mutatePipeline(
 ): Promise<{ items: PipelineSubstation[]; meta: SaveMeta }> {
   const { data, meta } = await mutateJsonFile<PipelineData>(
     PIPELINE_PATH,
+    { items: [] },
+    (cur) => ({ items: mutate(cur.items || []) }),
+    message
+  );
+  return { items: data.items, meta };
+}
+
+export async function loadDeals(): Promise<{ items: Deal[]; meta: SaveMeta }> {
+  try {
+    const { content, meta } = await readText(DEALS_PATH);
+    const parsed = JSON.parse(content) as DealsData;
+    return { items: Array.isArray(parsed.items) ? parsed.items : [], meta };
+  } catch {
+    return { items: [], meta: { source: "local", path: DEALS_PATH } };
+  }
+}
+
+export async function mutateDeals(
+  mutate: (items: Deal[]) => Deal[],
+  message = "Update deals.json via RMax CRM"
+): Promise<{ items: Deal[]; meta: SaveMeta }> {
+  const { data, meta } = await mutateJsonFile<DealsData>(
+    DEALS_PATH,
     { items: [] },
     (cur) => ({ items: mutate(cur.items || []) }),
     message
