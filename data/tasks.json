@@ -1,17 +1,3 @@
 {
-  "items": [
-    {
-      "id": "6c5e7922-22b2-41ac-bc2a-3ebf1c9c03f8",
-      "apn": "16220210008",
-      "propertyAddress": "3061 BUSINESS LN, LAS VEGAS, NV 89103",
-      "title": "Call VALLEY WIDE STORAGE LLC",
-      "note": "",
-      "dueAt": "2026-08-14T00:57:35.210Z",
-      "assignedTo": "demo@local.dev",
-      "status": "open",
-      "createdBy": "demo@local.dev",
-      "createdAt": "2026-08-13T23:57:47.002Z",
-      "completedAt": ""
-    }
-  ]
+  "items": []
 }
