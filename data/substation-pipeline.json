@@ -10,28 +10,62 @@
       "apn": "",
       "mwRequested": null,
       "expectedSubstation": "",
-      "status": "to_be_searched",
+      "status": "confirmed",
       "submittedBy": "demo@local.dev",
       "dateAdded": "2026-08-14T20:23:09.669Z",
       "justification": "Ahern site",
       "priority": "Medium",
       "assignedEe": "",
       "dateStudySubmittedToNve": "",
-      "nveResponseRaw": "",
-      "mwAvailable": null,
-      "peakDemand": "",
-      "feeders": [],
-      "trenchingFt": null,
-      "isdDate": "",
+      "nveResponseRaw": "CAUTION: This email originated from outside of the organization. Do not click links or open attachments unless you recognize the sender and know the content is safe.\n\nHi, Preston.\n\nI am not including the write-up on the 8 MW as we agreed the trench run was too long with the third feeder. I did include the screenshot, though.\n\nNote, no capacity will be reserved for this project and the requirements to serve will be reevaluated and may be different following receipt of request for Binding Design/Formal Planning.\n\nWe reviewed:\n\n\nParcel: 16208103001, 3325 W Sahara Ave.\n\nPower: 5 MW and 8 MW\n\nISD: Q3 2027\n\nFor 5 MVA: 2 feeders from Tam substation.\nTA1205: 2 MVA: Install a switch at [1], 300 feet of trenching at same location to intercept existing cable. Install any additional switches as required. Serve from source at [1].\nTA1210: 3 MVA: install any switches as required. Serve from source at [2].\nThis could be energized within NVEs standard construction timeframe. This is spreadsheet worthy.\n\n[cid:image002.png@01DD19CC.E99EE3B0]\n\n\n8 MVA: above, additional feeder, and 1.2 miles of trenching, etc.\n\n[cid:image003.png@01DD19CC.E99EE3B0]\n\n\nThank you,\n\nChad Jacks | Business Development Manager\nCell: 702-885-8732 | Teams Phone: 702-402-3319 | Email: Chad.Jacks@nvenergy.com<mailto:Chad.Jacks@nvenergy.com>\n6226 W. Sahara Avenue | Las Vegas, NV 89146\n\n[cid:image004.png@01DD19CC.E99EE3B0]\n\nFrom: Jacks, Chad (NV Energy)\nSent: Wednesday, July 15, 2026 2:40 PM\nTo: 'Preston Martin' <preston.martin@lewismc.com>\nSubject: RE: Power Request: 3325 W SAHARA AVE (5 / 8 mgs)\n\nSubmitted.\n\n\nThank you,\n\nChad Jacks | Business Development Manager\nCell: 702-885-8732 | Teams Phone: 702-402-3319 | Email: Chad.Jacks@nvenergy.com<mailto:Chad.Jacks@nvenergy.com>\n6226 W. Sahara Avenue | Las Vegas, NV 89146\n\n[cid:image004.png@01DD19CC.E99EE3B0]\n\nFrom: Preston Martin <preston.martin@lewismc.com<mailto:preston.martin@lewismc.com>>\nSent: Tuesday, July 14, 2026 3:19 PM\nTo: Jacks, Chad (NV Energy) <chad.jacks@nvenergy.com<mailto:chad.jacks@nvenergy.com>>\nSubject: [INTERNET] Power Request: 3325 W SAHARA AVE (5 / 8 mgs)\n\nTHIS MESSAGE IS FROM AN EXTERNAL SENDER.\nLook closely at the SENDER address. Do not open ATTACHMENTS unless expected. Check for INDICATORS of phishing. Hover over LINKS before clicking. Learn to spot a phishing message<http://aka.ms/LearnAboutSenderIdentification>\nHi Chad,\n\nHere's a new one, we know the owner and can get the time we need, it's a small site but with the stamp we should be good for 6-8mgs.\n\nParcel: 16208103001\nPower: 5mg / 8mgs\nISD: Q3 2027\n\n[Image removed by sender. photo]<https://linkprotect.cudasvc.com/url?a=http%3a%2f%2fwww.lewisgroupofcompanies.com%2f&c=E,1,jVJyuk-irZPwEVLKGtK0N75k6ffsloDGVMrHKP2FXsgrrlsxcMESWmsCSDMwPiB8eaiUTJOrhHXntJhRlAuUNjXKmv0xqkQnfCbsU8B87UyK8pL0yoFVc7fjHTs,&typo=1>\n\nPreston Martin\nManager - Land Acquisition NV\nLewis Management Corp.\n\nDirect: (702) 262-7309<tel:(702)%20262-7309>\n\npreston.martin@lewismc.com<mailto:preston.martin@lewismc.com>\n\n5240 S. Polaris Avenue Las Vegas NV 89118\n\nConfidentiality Notice: The information contained in this email and any attachments is intended only for the recipient and may be confidential and/or privileged. If you are not the intended recipient, any unauthorized use, disclosure, or copying is strictly prohibited and may be unlawful. If you have received this email in error, please immediately notify the sender by return email and delete the original message and all copies from your system. Thank you.\n\n[Image removed by sender. __tpx__]\n\nThis email, including attachments, may contain highly sensitive, confidential, proprietary or valuable information. It is intended only for the designated recipient(s) named above. Any unauthorized use, reproduction, forwarding or distribution of this transmission, including attachments, is prohibited. If you have received this communication in error, please immediately notify the sender and permanently delete any record of this transmission.",
+      "mwAvailable": 5,
+      "peakDemand": "5 MW and 8 MW",
+      "feeders": [
+        {
+          "id": "TA-1205",
+          "mva": null
+        },
+        {
+          "id": "TA-1210",
+          "mva": null
+        }
+      ],
+      "trenchingFt": 300,
+      "isdDate": "2027-07-01",
       "longLeadItems": [],
       "longLeadPresent": false,
-      "compositeScore": null,
-      "dateResponseReceived": "",
+      "compositeScore": 60,
+      "dateResponseReceived": "2026-08-14T21:04:49.982Z",
       "notes": "",
-      "responses": [],
+      "responses": [
+        {
+          "id": "9c0e24ed-0e25-4028-bb0d-68bff23fc9c7",
+          "subject": "NV Energy Power Availability request - Lewis Management RE: Power Request: 3325 W SAHARA AVE (5 / 8 mgs)",
+          "date": "Wed, 22 Jul 2026 18:28:08 +0000",
+          "from": "\"Jacks, Chad (NV Energy)\" <Chad.Jacks@nvenergy.com>",
+          "text": "CAUTION: This email originated from outside of the organization. Do not click links or open attachments unless you recognize the sender and know the content is safe.\n\nHi, Preston.\n\nI am not including the write-up on the 8 MW as we agreed the trench run was too long with the third feeder. I did include the screenshot, though.\n\nNote, no capacity will be reserved for this project and the requirements to serve will be reevaluated and may be different following receipt of request for Binding Design/Formal Planning.\n\nWe reviewed:\n\n\nParcel: 16208103001, 3325 W Sahara Ave.\n\nPower: 5 MW and 8 MW\n\nISD: Q3 2027\n\nFor 5 MVA: 2 feeders from Tam substation.\nTA1205: 2 MVA: Install a switch at [1], 300 feet of trenching at same location to intercept existing cable. Install any additional switches as required. Serve from source at [1].\nTA1210: 3 MVA: install any switches as required. Serve from source at [2].\nThis could be energized within NVEs standard construction timeframe. This is spreadsheet worthy.\n\n[cid:image002.png@01DD19CC.E99EE3B0]\n\n\n8 MVA: above, additional feeder, and 1.2 miles of trenching, etc.\n\n[cid:image003.png@01DD19CC.E99EE3B0]\n\n\nThank you,\n\nChad Jacks | Business Development Manager\nCell: 702-885-8732 | Teams Phone: 702-402-3319 | Email: Chad.Jacks@nvenergy.com<mailto:Chad.Jacks@nvenergy.com>\n6226 W. Sahara Avenue | Las Vegas, NV 89146\n\n[cid:image004.png@01DD19CC.E99EE3B0]\n\nFrom: Jacks, Chad (NV Energy)\nSent: Wednesday, July 15, 2026 2:40 PM\nTo: 'Preston Martin' <preston.martin@lewismc.com>\nSubject: RE: Power Request: 3325 W SAHARA AVE (5 / 8 mgs)\n\nSubmitted.\n\n\nThank you,\n\nChad Jacks | Business Development Manager\nCell: 702-885-8732 | Teams Phone: 702-402-3319 | Email: Chad.Jacks@nvenergy.com<mailto:Chad.Jacks@nvenergy.com>\n6226 W. Sahara Avenue | Las Vegas, NV 89146\n\n[cid:image004.png@01DD19CC.E99EE3B0]\n\nFrom: Preston Martin <preston.martin@lewismc.com<mailto:preston.martin@lewismc.com>>\nSent: Tuesday, July 14, 2026 3:19 PM\nTo: Jacks, Chad (NV Energy) <chad.jacks@nvenergy.com<mailto:chad.jacks@nvenergy.com>>\nSubject: [INTERNET] Power Request: 3325 W SAHARA AVE (5 / 8 mgs)\n\nTHIS MESSAGE IS FROM AN EXTERNAL SENDER.\nLook closely at the SENDER address. Do not open ATTACHMENTS unless expected. Check for INDICATORS of phishing. Hover over LINKS before clicking. Learn to spot a phishing message<http://aka.ms/LearnAboutSenderIdentification>\nHi Chad,\n\nHere's a new one, we know the owner and can get the time we need, it's a small site but with the stamp we should be good for 6-8mgs.\n\nParcel: 16208103001\nPower: 5mg / 8mgs\nISD: Q3 2027\n\n[Image removed by sender. photo]<https://linkprotect.cudasvc.com/url?a=http%3a%2f%2fwww.lewisgroupofcompanies.com%2f&c=E,1,jVJyuk-irZPwEVLKGtK0N75k6ffsloDGVMrHKP2FXsgrrlsxcMESWmsCSDMwPiB8eaiUTJOrhHXntJhRlAuUNjXKmv0xqkQnfCbsU8B87UyK8pL0yoFVc7fjHTs,&typo=1>\n\nPreston Martin\nManager - Land Acquisition NV\nLewis Management Corp.\n\nDirect: (702) 262-7309<tel:(702)%20262-7309>\n\npreston.martin@lewismc.com<mailto:preston.martin@lewismc.com>\n\n5240 S. Polaris Avenue Las Vegas NV 89118\n\nConfidentiality Notice: The information contained in this email and any attachments is intended only for the recipient and may be confidential and/or privileged. If you are not the intended recipient, any unauthorized use, disclosure, or copying is strictly prohibited and may be unlawful. If you have received this email in error, please immediately notify the sender by return email and delete the original message and all copies from your system. Thank you.\n\n[Image removed by sender. __tpx__]\n\nThis email, including attachments, may contain highly sensitive, confidential, proprietary or valuable information. It is intended only for the designated recipient(s) named above. Any unauthorized use, reproduction, forwarding or distribution of this transmission, including attachments, is prohibited. If you have received this communication in error, please immediately notify the sender and permanently delete any record of this transmission.",
+          "mwAvailable": 5,
+          "peakDemand": "5 MW and 8 MW",
+          "isdDate": "2027-07-01",
+          "feeders": [
+            {
+              "id": "TA-1205",
+              "mva": null
+            },
+            {
+              "id": "TA-1210",
+              "mva": null
+            }
+          ],
+          "trenchingFt": 300,
+          "longLeadItems": [],
+          "images": [],
+          "sourceFile": "NV Energy Power Availability request - Lewis Management RE_ Power Request_ 3325 W SAHARA AVE (5 _ 8 mgs).eml"
+        }
+      ],
       "images": [],
       "createdAt": "2026-08-14T20:23:09.669Z",
-      "updatedAt": "2026-08-14T20:23:09.669Z"
+      "updatedAt": "2026-08-14T21:04:49.982Z"
     },
     {
       "id": "dd971fa8-6a19-41af-8835-c4e6b74aa66c",
