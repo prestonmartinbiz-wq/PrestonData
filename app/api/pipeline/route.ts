@@ -44,22 +44,55 @@ export async function POST(req: NextRequest) {
   try {
     const user = await requireUser();
     const body = (await req.json()) as Partial<PipelineSubstation>;
-    if (!(body.name || "").trim()) {
-      return NextResponse.json({ error: "Substation name is required" }, { status: 400 });
+    const kind = body.kind === "site" ? "site" : "substation";
+
+    // A site is identified by its APN/address; a substation by its name.
+    const derivedName =
+      kind === "site"
+        ? (body.name || body.address || (body.apn ? `APN ${body.apn}` : "")).trim()
+        : (body.name || "").trim();
+    if (!derivedName) {
+      return NextResponse.json(
+        {
+          error:
+            kind === "site"
+              ? "APN or address is required"
+              : "Substation name is required",
+        },
+        { status: 400 }
+      );
     }
+    if (kind === "site" && !(body.apn || "").trim() && !(body.address || "").trim()) {
+      return NextResponse.json(
+        { error: "Enter the site APN and address" },
+        { status: 400 }
+      );
+    }
+
     const priority: PipelinePriority = (["High", "Medium", "Low"] as const).includes(
       body.priority as PipelinePriority
     )
       ? (body.priority as PipelinePriority)
       : "Medium";
 
+    const mwRequested =
+      body.mwRequested === null || body.mwRequested === undefined
+        ? null
+        : Number.isFinite(Number(body.mwRequested))
+          ? Number(body.mwRequested)
+          : null;
+
     const now = new Date().toISOString();
     const record: PipelineSubstation = finalize({
       id: randomUUID(),
-      name: body.name!.trim(),
+      kind,
+      name: derivedName,
       address: (body.address || "").trim(),
       latitude: (body.latitude || "").toString().trim(),
       longitude: (body.longitude || "").toString().trim(),
+      apn: (body.apn || "").trim(),
+      mwRequested,
+      expectedSubstation: (body.expectedSubstation || "").trim(),
       status: "to_be_searched",
       submittedBy: (body.submittedBy || user.email || user.userId || "").trim(),
       dateAdded: now,
@@ -72,7 +105,7 @@ export async function POST(req: NextRequest) {
       peakDemand: "",
       feeders: [],
       trenchingFt: null,
-      isdDate: "",
+      isdDate: (body.isdDate || "").trim(),
       longLeadItems: [],
       longLeadPresent: false,
       compositeScore: null,
@@ -86,7 +119,7 @@ export async function POST(req: NextRequest) {
 
     const { items, meta } = await mutatePipeline(
       (list) => [record, ...list],
-      `Add substation ${record.name} to pipeline (${user.email || user.userId})`
+      `Add ${kind} ${record.name} to pipeline (${user.email || user.userId})`
     );
     return NextResponse.json({ item: record, items, meta });
   } catch (err) {

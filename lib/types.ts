@@ -177,6 +177,13 @@ export type PipelineStatus =
 
 export type PipelinePriority = "High" | "Medium" | "Low";
 
+/**
+ * A pipeline entry is either a whole substation being studied, or a specific
+ * "site" (a parcel/APN) whose power is expected from a substation. Both kinds
+ * share the same lifecycle and flow through the EE Queue.
+ */
+export type PipelineKind = "substation" | "site";
+
 /** One NV Energy response ("pull") for a substation — a substation can have several. */
 export type PipelineResponse = {
   id: string;
@@ -198,10 +205,18 @@ export type PipelineResponse = {
 
 export type PipelineSubstation = {
   id: string;
+  /** "substation" (default) or "site" (a specific parcel/APN). */
+  kind?: PipelineKind;
   name: string;
   address: string;
   latitude: string;
   longitude: string;
+  /** Site only: the parcel APN. */
+  apn?: string;
+  /** Site only: MW the site is requesting. */
+  mwRequested?: number | null;
+  /** Site only: substation the power is expected to come from. */
+  expectedSubstation?: string;
   status: PipelineStatus;
   /** Analyst who flagged it. */
   submittedBy: string;
