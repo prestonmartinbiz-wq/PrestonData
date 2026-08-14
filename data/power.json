@@ -1,6 +1,36 @@
 {
   "items": [
     {
+      "substation": "ZZ Video Demo",
+      "apn": "16204406012",
+      "address": "2441 WESTERN",
+      "isd": "Q3 2027",
+      "peakDemand": "40 MW",
+      "feeders": [
+        {
+          "id": "HI-1301",
+          "mva": 9
+        },
+        {
+          "id": "HI-1305",
+          "mva": 12
+        },
+        {
+          "id": "HI-1312",
+          "mva": 6
+        }
+      ],
+      "trenchingFt": 6000,
+      "trenchingSegments": 2,
+      "contactName": "Chad Jacks",
+      "contactEmail": "Chad.Jacks@nvenergy.com",
+      "emailSubject": "Re: NV Energy Power Availability request - Highland 40 MW",
+      "emailDate": "Wed, 13 Aug 2026 15:22:10 -0700",
+      "sourceFile": "sample-nve-request.eml",
+      "id": "701d06ca-fc9e-4781-820e-ff046a71686c",
+      "createdAt": "2026-08-14T18:18:29.250Z"
+    },
+    {
       "substation": "ZZ Demo Substation",
       "apn": "16204406012",
       "address": "2441 WESTERN",
