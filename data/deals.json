@@ -1,3 +1,131 @@
 {
-  "items": []
+  "items": [
+    {
+      "id": "76cfe5da-573d-42fd-9a05-8514be3c85bf",
+      "name": "Live Deal - 5375 Procyon",
+      "type": "under_contract",
+      "stage": "power_reservation",
+      "apn": "16229301008",
+      "address": "5375 PROCYON ST LAS VEGAS NV 89118",
+      "substation": "Procyon",
+      "mw": 20,
+      "summary": "Site under contract; working the NVE power reservation and documentation.",
+      "keyDate": "",
+      "contacts": [],
+      "documents": [
+        {
+          "id": "d311453b-e7ce-4c49-b064-18ea88e9441a",
+          "key": "psa",
+          "label": "Purchase & Sale Agreement (PSA)",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:35:36.233Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "86feaa09-390d-4c63-ba15-9653dfaeff19",
+          "key": "site_plan",
+          "label": "Site plan (with panel location marked)",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:35:36.233Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "dd062666-6bc0-43e8-836c-2cb216156594",
+          "key": "civil_dwg",
+          "label": "Civil Improvement Plans (.dwg CAD Files)",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:35:36.233Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "20e7897a-bacc-4936-a813-b04abf64e394",
+          "key": "civil_pdf",
+          "label": "Civil Improvement Plans (PDF)",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:35:36.233Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "cea99db9-3906-4120-9f64-3722b21c649b",
+          "key": "electrical_site_plan",
+          "label": "Electrical Site Plan",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:35:36.233Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "53762e3c-317b-46f2-8de1-9051d20c4e83",
+          "key": "building_electrical",
+          "label": "Building Electrical Plans",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:35:36.233Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "b63bd5e6-43c3-4c41-b1f7-cc8702dc7584",
+          "key": "single_line",
+          "label": "Single Line Diagram",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:35:36.233Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "50fa6bf4-8636-4f23-9d69-88546d4f25d8",
+          "key": "load_calc",
+          "label": "Load Calculation Sheet",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:35:36.233Z",
+          "updatedBy": ""
+        },
+        {
+          "id": "8c73a4c3-5101-4667-8c0c-c4739cb72411",
+          "key": "equipment_schedule",
+          "label": "Equipment Schedule",
+          "status": "needed",
+          "fileUrl": "",
+          "fileName": "",
+          "link": "",
+          "note": "",
+          "updatedAt": "2026-08-14T19:35:36.233Z",
+          "updatedBy": ""
+        }
+      ],
+      "milestones": [],
+      "createdBy": "demo@local.dev",
+      "createdAt": "2026-08-14T19:35:36.230Z",
+      "updatedAt": "2026-08-14T19:35:36.230Z"
+    }
+  ]
 }
