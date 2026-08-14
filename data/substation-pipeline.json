@@ -10,13 +10,13 @@
       "apn": "16204813046",
       "mwRequested": 10,
       "expectedSubstation": "",
-      "status": "to_be_searched",
+      "status": "awaiting_nve_response",
       "submittedBy": "demo@local.dev",
       "dateAdded": "2026-08-14T18:46:46.575Z",
       "justification": "",
       "priority": "Medium",
-      "assignedEe": "",
-      "dateStudySubmittedToNve": "",
+      "assignedEe": "preston",
+      "dateStudySubmittedToNve": "2026-08-14",
       "nveResponseRaw": "",
       "mwAvailable": null,
       "peakDemand": "",
@@ -31,7 +31,7 @@
       "responses": [],
       "images": [],
       "createdAt": "2026-08-14T18:46:46.575Z",
-      "updatedAt": "2026-08-14T18:46:46.575Z"
+      "updatedAt": "2026-08-14T18:47:16.189Z"
     },
     {
       "id": "85b78ef9-7222-4fb1-8db4-b5f9de72938f",
