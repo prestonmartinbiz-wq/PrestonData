@@ -132,10 +132,18 @@
           "updatedBy": ""
         }
       ],
-      "milestones": [],
+      "milestones": [
+        {
+          "id": "6d0c0c4a-9526-4607-8781-d8d47639bb5a",
+          "title": "PSA contingency deadline",
+          "dueAt": "",
+          "doneAt": "",
+          "note": ""
+        }
+      ],
       "createdBy": "demo@local.dev",
       "createdAt": "2026-08-14T19:35:36.230Z",
-      "updatedAt": "2026-08-14T19:39:53.967Z"
+      "updatedAt": "2026-08-14T19:42:03.964Z"
     }
   ]
 }
