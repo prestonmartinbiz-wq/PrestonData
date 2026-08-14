@@ -135,10 +135,18 @@
         }
       ],
       "milestones": [],
-      "diagrams": [],
+      "diagrams": [
+        {
+          "id": "c2a42523-4855-452c-90e0-276fb9fc3fb0",
+          "url": "https://fzwtye8vohqhnc6g.public.blob.vercel-storage.com/deal-docs/247ea088-3afe-4754-a1ff-a0e644783233/diagram-power-diagram-sample-Ms5d7khpmLJEUiSsi6l9La2PtmGEqV.webp",
+          "name": "power-diagram-sample.webp",
+          "caption": "",
+          "source": "upload"
+        }
+      ],
       "createdBy": "demo@local.dev",
       "createdAt": "2026-08-14T23:31:30.883Z",
-      "updatedAt": "2026-08-14T23:31:30.883Z"
+      "updatedAt": "2026-08-14T23:31:32.156Z"
     },
     {
       "id": "b7d9c22c-1f92-44d8-8d3f-d1bb3664b445",
