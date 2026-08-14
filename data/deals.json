@@ -11,7 +11,17 @@
       "mw": 20,
       "summary": "Under contract; working NVE power reservation.",
       "keyDate": "",
-      "contacts": [],
+      "contacts": [
+        {
+          "id": "621ceb8a-f015-4b7f-8e84-0ad46e3fe38b",
+          "name": "Jack Lasky",
+          "role": "Owner",
+          "company": "LM Construction",
+          "phone": "702-262-6032",
+          "email": "jack@lm.com",
+          "notes": ""
+        }
+      ],
       "documents": [
         {
           "id": "62f48fe7-5573-4285-9592-f83f3748e98f",
@@ -125,7 +135,7 @@
       "milestones": [],
       "createdBy": "demo@local.dev",
       "createdAt": "2026-08-14T19:23:28.338Z",
-      "updatedAt": "2026-08-14T19:23:28.338Z"
+      "updatedAt": "2026-08-14T19:28:27.111Z"
     }
   ]
 }
