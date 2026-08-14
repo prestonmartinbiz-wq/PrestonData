@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { requireUser } from "@/lib/auth";
-import { loadTasks, saveTasks } from "@/lib/data-store";
+import { loadTasks, mutateTasks } from "@/lib/data-store";
 import type { Task } from "@/lib/types";
 import { normalizeApn } from "@/lib/utils";
 
@@ -45,7 +45,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "dueAt is required" }, { status: 400 });
     }
 
-    const { tasks } = await loadTasks();
     const task: Task = {
       id: randomUUID(),
       apn: normalizeApn(body.apn || "") || (body.apn || ""),
@@ -59,9 +58,8 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
       completedAt: "",
     };
-    const next = [task, ...tasks];
-    const meta = await saveTasks(
-      next,
+    const { tasks: next, meta } = await mutateTasks(
+      (list) => [task, ...list],
       `Add task for ${task.apn || "lead"} (${user.email || user.userId})`
     );
     return NextResponse.json({ task, tasks: next, meta });
@@ -79,20 +77,24 @@ export async function PUT(req: NextRequest) {
     if (!body.id) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
-    const { tasks } = await loadTasks();
-    const idx = tasks.findIndex((t) => t.id === body.id);
-    if (idx === -1) {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 });
-    }
     const patch = body.patch || {};
-    const updated: Task = { ...tasks[idx], ...patch, id: tasks[idx].id };
-    if (patch.status === "done" && !updated.completedAt) {
-      updated.completedAt = new Date().toISOString();
-    }
-    if (patch.status === "open") updated.completedAt = "";
-    const next = [...tasks];
-    next[idx] = updated;
-    const meta = await saveTasks(next, `Update task ${updated.id} (${user.email || user.userId})`);
+    let updated: Task | null = null;
+    let notFound = false;
+    const { tasks: next, meta } = await mutateTasks((list) => {
+      const idx = list.findIndex((t) => t.id === body.id);
+      if (idx === -1) {
+        notFound = true;
+        return list;
+      }
+      const u: Task = { ...list[idx], ...patch, id: list[idx].id };
+      if (patch.status === "done" && !u.completedAt) u.completedAt = new Date().toISOString();
+      if (patch.status === "open") u.completedAt = "";
+      updated = u;
+      const arr = [...list];
+      arr[idx] = u;
+      return arr;
+    }, `Update task ${body.id} (${user.email || user.userId})`);
+    if (notFound || !updated) return NextResponse.json({ error: "Task not found" }, { status: 404 });
     return NextResponse.json({ task: updated, tasks: next, meta });
   } catch (err) {
     if (err instanceof Response) return err;
@@ -106,12 +108,13 @@ export async function DELETE(req: NextRequest) {
     const user = await requireUser();
     const id = req.nextUrl.searchParams.get("id");
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
-    const { tasks } = await loadTasks();
-    const next = tasks.filter((t) => t.id !== id);
-    if (next.length === tasks.length) {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 });
-    }
-    const meta = await saveTasks(next, `Delete task ${id} (${user.email || user.userId})`);
+    let existed = false;
+    const { tasks: next, meta } = await mutateTasks((list) => {
+      const filtered = list.filter((t) => t.id !== id);
+      existed = filtered.length !== list.length;
+      return filtered;
+    }, `Delete task ${id} (${user.email || user.userId})`);
+    if (!existed) return NextResponse.json({ error: "Task not found" }, { status: 404 });
     return NextResponse.json({ tasks: next, meta });
   } catch (err) {
     if (err instanceof Response) return err;

@@ -60,6 +60,13 @@ export function AppShell({
             </nav>
           </div>
           <div className="flex items-center gap-3 text-sm text-slate-600">
+            <a
+              href="/api/export"
+              className="hidden rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 sm:inline-block"
+              title="Download a full backup of all data"
+            >
+              Backup
+            </a>
             {userEmail ? <span className="hidden sm:inline">{userEmail}</span> : null}
             {clerkEnabled ? (
               <ClerkUserButton />

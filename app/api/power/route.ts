@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { requireUser } from "@/lib/auth";
-import { loadPower, savePower } from "@/lib/data-store";
+import { loadPower, mutatePower } from "@/lib/data-store";
 import { extractPowerFromText, parsePowerEml, type ParsedPower } from "@/lib/power";
 import type { PowerAvailability } from "@/lib/types";
 
@@ -50,11 +50,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ preview: parsed });
       }
 
-      const { power } = await loadPower();
       const record = finalize(parsed);
-      const next = [record, ...power];
-      const meta = await savePower(
-        next,
+      const { power: next, meta } = await mutatePower(
+        (list) => [record, ...list],
         `Add power availability for ${record.substation || "unknown"} (${
           user.email || user.userId
         })`
@@ -84,17 +82,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Substation is required" }, { status: 400 });
     }
 
-    const { power } = await loadPower();
     const record: PowerAvailability = {
       ...finalize(body.item as ParsedPower),
       // Respect an id/createdAt if the client supplied one (edit-in-place).
       id: body.item.id || randomUUID(),
       createdAt: body.item.createdAt || new Date().toISOString(),
     };
-    const withoutDupe = power.filter((p) => p.id !== record.id);
-    const next = [record, ...withoutDupe];
-    const meta = await savePower(
-      next,
+    const { power: next, meta } = await mutatePower(
+      (list) => [record, ...list.filter((p) => p.id !== record.id)],
       `Save power availability for ${record.substation} (${user.email || user.userId})`
     );
     return NextResponse.json({ power: next, meta, added: record });
@@ -111,15 +106,15 @@ export async function DELETE(req: NextRequest) {
     const id = req.nextUrl.searchParams.get("id");
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
-    const { power } = await loadPower();
-    const next = power.filter((p) => p.id !== id);
-    if (next.length === power.length) {
+    let existed = false;
+    const { power: next, meta } = await mutatePower((list) => {
+      const filtered = list.filter((p) => p.id !== id);
+      existed = filtered.length !== list.length;
+      return filtered;
+    }, `Delete power availability ${id} (${user.email || user.userId})`);
+    if (!existed) {
       return NextResponse.json({ error: "Record not found" }, { status: 404 });
     }
-    const meta = await savePower(
-      next,
-      `Delete power availability ${id} (${user.email || user.userId})`
-    );
     return NextResponse.json({ power: next, meta });
   } catch (err) {
     if (err instanceof Response) return err;

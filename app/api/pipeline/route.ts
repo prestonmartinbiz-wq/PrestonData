@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { requireUser } from "@/lib/auth";
-import { loadPipeline, savePipeline } from "@/lib/data-store";
+import { loadPipeline, mutatePipeline } from "@/lib/data-store";
 import { monthsUntil, scoreSubstation } from "@/lib/scoring";
 import type { PipelinePriority, PipelineStatus, PipelineSubstation } from "@/lib/types";
 
@@ -84,10 +84,11 @@ export async function POST(req: NextRequest) {
       updatedAt: now,
     });
 
-    const { items } = await loadPipeline();
-    const next = [record, ...items];
-    const meta = await savePipeline(next, `Add substation ${record.name} to pipeline (${user.email || user.userId})`);
-    return NextResponse.json({ item: record, items: next, meta });
+    const { items, meta } = await mutatePipeline(
+      (list) => [record, ...list],
+      `Add substation ${record.name} to pipeline (${user.email || user.userId})`
+    );
+    return NextResponse.json({ item: record, items, meta });
   } catch (err) {
     if (err instanceof Response) return err;
     console.error(err);
@@ -104,29 +105,31 @@ export async function PUT(req: NextRequest) {
     };
     if (!body.id) return NextResponse.json({ error: "id is required" }, { status: 400 });
 
-    const { items } = await loadPipeline();
-    const idx = items.findIndex((i) => i.id === body.id);
-    if (idx === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
     const patch = body.patch || {};
     if (patch.status && !STATUSES.includes(patch.status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
-    const merged: PipelineSubstation = { ...items[idx], ...patch, id: items[idx].id };
-    // Set response-received timestamp when a record first becomes confirmed.
-    if (patch.status === "confirmed" && !merged.dateResponseReceived) {
-      merged.dateResponseReceived = new Date().toISOString();
-    }
-    const record = finalize(merged);
+    let record: PipelineSubstation | null = null;
+    let notFound = false;
+    const { items, meta } = await mutatePipeline((list) => {
+      const idx = list.findIndex((i) => i.id === body.id);
+      if (idx === -1) {
+        notFound = true;
+        return list;
+      }
+      const merged: PipelineSubstation = { ...list[idx], ...patch, id: list[idx].id };
+      if (patch.status === "confirmed" && !merged.dateResponseReceived) {
+        merged.dateResponseReceived = new Date().toISOString();
+      }
+      record = finalize(merged);
+      const next = [...list];
+      next[idx] = record;
+      return next;
+    }, `Update pipeline substation ${body.id} (${user.email || user.userId})`);
 
-    const next = [...items];
-    next[idx] = record;
-    const meta = await savePipeline(
-      next,
-      `Update pipeline substation ${record.name} -> ${record.status} (${user.email || user.userId})`
-    );
-    return NextResponse.json({ item: record, items: next, meta });
+    if (notFound || !record) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ item: record, items, meta });
   } catch (err) {
     if (err instanceof Response) return err;
     console.error(err);
@@ -139,13 +142,14 @@ export async function DELETE(req: NextRequest) {
     const user = await requireUser();
     const id = req.nextUrl.searchParams.get("id");
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
-    const { items } = await loadPipeline();
-    const next = items.filter((i) => i.id !== id);
-    if (next.length === items.length) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-    const meta = await savePipeline(next, `Delete pipeline substation ${id} (${user.email || user.userId})`);
-    return NextResponse.json({ items: next, meta });
+    let existed = false;
+    const { items, meta } = await mutatePipeline((list) => {
+      const next = list.filter((i) => i.id !== id);
+      existed = next.length !== list.length;
+      return next;
+    }, `Delete pipeline substation ${id} (${user.email || user.userId})`);
+    if (!existed) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ items, meta });
   } catch (err) {
     if (err instanceof Response) return err;
     console.error(err);
