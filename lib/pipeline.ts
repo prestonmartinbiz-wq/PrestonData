@@ -37,35 +37,71 @@ export function mergeFeeders(a: Feeder[], b: Feeder[]): Feeder[] {
 }
 
 /**
- * Fold a new NVE "pull" into a substation's top-level rollup fields. Keeps the
- * highest MW seen, unions feeders / long-lead items / diagram images, and takes
- * the most recent pull's ISD / peak demand / trenching / raw text. The pull is
- * appended to `responses` so the full history is preserved.
+ * A substation's available MW is the MAX single confirmed availability across
+ * its pulls — NEVER the sum. Multiple requests over time typically draw from the
+ * same feeders, so adding them would double-count the same physical capacity
+ * (a 10 MW request and a 20 MW request from the same feeders is 20, not 30).
+ */
+export function rollupAvailableMw(
+  responses: PipelineResponse[],
+  fallback: number | null = null
+): number | null {
+  const vals = (responses || [])
+    .map((r) => r.mwAvailable)
+    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  return vals.length ? Math.max(...vals) : fallback ?? null;
+}
+
+/**
+ * Recompute a substation's rollup fields from its full `responses` history so
+ * the result is idempotent (safe to re-run after add/edit/delete). Feeders are
+ * deduplicated by id — the same feeder seen in two pulls is one feeder, one
+ * capacity — and available MW is the max across pulls, never the sum.
+ */
+export function rollupFromResponses(record: PipelineSubstation): PipelineSubstation {
+  const responses = record.responses || [];
+  // Fold response feeders on top of any existing (seed) feeders, deduped by id.
+  const feeders = responses.reduce(
+    (acc, r) => mergeFeeders(acc, r.feeders || []),
+    mergeFeeders(record.feeders || [], [])
+  );
+  const longLeadItems = Array.from(
+    new Set([
+      ...(record.longLeadItems || []),
+      ...responses.flatMap((r) => r.longLeadItems || []),
+    ])
+  );
+  const images = Array.from(
+    new Set([
+      ...(record.images || []),
+      ...responses.flatMap((r) => r.images || []),
+    ])
+  );
+  const latest = responses[responses.length - 1];
+  return {
+    ...record,
+    feeders,
+    mwAvailable: rollupAvailableMw(responses, record.mwAvailable ?? null),
+    isdDate: latest?.isdDate || record.isdDate,
+    peakDemand: latest?.peakDemand || record.peakDemand,
+    trenchingFt: latest?.trenchingFt ?? record.trenchingFt ?? null,
+    longLeadItems,
+    images,
+    nveResponseRaw: latest?.text || record.nveResponseRaw,
+  };
+}
+
+/**
+ * Append a new NVE "pull" and recompute the rollup from the full history. The
+ * pull is preserved in `responses`; capacity is never double-counted (see
+ * rollupAvailableMw / rollupFromResponses).
  */
 export function applyResponse(
   record: PipelineSubstation,
   r: PipelineResponse
 ): PipelineSubstation {
-  const mws = [record.mwAvailable, r.mwAvailable].filter(
-    (v): v is number => typeof v === "number" && Number.isFinite(v)
-  );
-  const feeders = mergeFeeders(record.feeders || [], r.feeders || []);
-  const longLeadItems = Array.from(
-    new Set([...(record.longLeadItems || []), ...(r.longLeadItems || [])])
-  );
-  const images = Array.from(
-    new Set([...(record.images || []), ...(r.images || [])])
-  );
-  return {
+  return rollupFromResponses({
     ...record,
-    mwAvailable: mws.length ? Math.max(...mws) : record.mwAvailable ?? null,
-    isdDate: r.isdDate || record.isdDate,
-    peakDemand: r.peakDemand || record.peakDemand,
-    trenchingFt: r.trenchingFt ?? record.trenchingFt ?? null,
-    feeders,
-    longLeadItems,
-    nveResponseRaw: r.text || record.nveResponseRaw,
     responses: [...(record.responses || []), r],
-    images,
-  };
+  });
 }

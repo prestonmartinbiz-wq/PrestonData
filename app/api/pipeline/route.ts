@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { requireUser } from "@/lib/auth";
 import { loadPipeline, mutatePipeline } from "@/lib/data-store";
+import { mergeFeeders, rollupAvailableMw } from "@/lib/pipeline";
 import { monthsUntil, scoreSubstation } from "@/lib/scoring";
 import type { PipelinePriority, PipelineStatus, PipelineSubstation } from "@/lib/types";
 
@@ -154,6 +155,18 @@ export async function PUT(req: NextRequest) {
       const merged: PipelineSubstation = { ...list[idx], ...patch, id: list[idx].id };
       if (patch.status === "confirmed" && !merged.dateResponseReceived) {
         merged.dateResponseReceived = new Date().toISOString();
+      }
+      // When pulls change but MW isn't set by hand, recompute the rollup so
+      // capacity is the MAX across pulls (never summed) and feeders stay deduped.
+      if (patch.responses && patch.mwAvailable === undefined) {
+        merged.mwAvailable = rollupAvailableMw(
+          merged.responses || [],
+          merged.mwAvailable ?? null
+        );
+        merged.feeders = (merged.responses || []).reduce(
+          (acc, r) => mergeFeeders(acc, r.feeders || []),
+          mergeFeeders(merged.feeders || [], [])
+        );
       }
       record = finalize(merged);
       const next = [...list];

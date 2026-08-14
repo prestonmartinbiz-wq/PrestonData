@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileUp, MapPin, Plus, Trash2, Upload, Zap } from "lucide-react";
+import { FileUp, MapPin, Plus, RefreshCw, Trash2, Upload, Zap } from "lucide-react";
 import { PipelineDetail } from "@/components/crm/pipeline-detail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -142,6 +142,8 @@ export function PipelineBoard({
   const [preqDropping, setPreqDropping] = useState(false);
   const [preqSaving, setPreqSaving] = useState(false);
   const preqFileRef = useRef<HTMLInputElement>(null);
+
+  const [rechecking, setRechecking] = useState(false);
 
   // Add site
   const [siteOpen, setSiteOpen] = useState(false);
@@ -467,6 +469,36 @@ export function PipelineBoard({
     }
   }
 
+  async function recheckCapacity() {
+    setRechecking(true);
+    try {
+      const res = await fetch("/api/pipeline/recompute", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Recheck failed");
+      setItems(data.items);
+      if (data.count) {
+        const summary = data.changed
+          .slice(0, 4)
+          .map(
+            (c: { name: string; from: number | null; to: number | null }) =>
+              `${c.name}: ${c.from ?? "—"}→${c.to ?? "—"} MW`
+          )
+          .join(", ");
+        toast.success(
+          `Adjusted ${data.count} substation(s): ${summary}${
+            data.count > 4 ? "…" : ""
+          }`
+        );
+      } else {
+        toast.success("Capacity looks good — no double-counting found");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Recheck failed");
+    } finally {
+      setRechecking(false);
+    }
+  }
+
   async function createSite() {
     if (!site.apn.trim() && !site.address.trim()) {
       toast.error("Enter the site APN and address");
@@ -530,6 +562,16 @@ export function PipelineBoard({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={recheckCapacity}
+            disabled={rechecking}
+            title="Re-derive available MW from each pull and remove any double-counted capacity"
+          >
+            <RefreshCw className={`h-4 w-4 ${rechecking ? "animate-spin" : ""}`} />
+            {rechecking ? "Rechecking…" : "Recheck capacity"}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => importRef.current?.click()}>
             <Upload className="h-4 w-4" /> Import CSV
           </Button>
@@ -587,7 +629,12 @@ export function PipelineBoard({
                 <tr>
                   <th className="px-3 py-2 font-medium">#</th>
                   <th className="px-3 py-2 font-medium">Substation</th>
-                  <th className="px-3 py-2 font-medium">MW avail</th>
+                  <th
+                    className="px-3 py-2 font-medium"
+                    title="Max confirmed availability across all requests — not summed, since requests draw from the same feeders"
+                  >
+                    MW avail
+                  </th>
                   <th className="px-3 py-2 font-medium">Feeders</th>
                   <th className="px-3 py-2 font-medium">Score</th>
                   <th className="px-3 py-2 font-medium">Rating</th>
