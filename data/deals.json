@@ -135,10 +135,18 @@
         }
       ],
       "milestones": [],
-      "diagrams": [],
+      "diagrams": [
+        {
+          "id": "8440d1d6-5be5-4338-922f-f685ccec2f95",
+          "url": "https://fzwtye8vohqhnc6g.public.blob.vercel-storage.com/deal-docs/b7d9c22c-1f92-44d8-8d3f-d1bb3664b445/diagram-10_MW-yY2Bgnu2Hlh9Dy1FpXV5tZK00m7PGf.png",
+          "name": "10 MW.png",
+          "caption": "",
+          "source": "upload"
+        }
+      ],
       "createdBy": "demo@local.dev",
       "createdAt": "2026-08-14T23:27:57.245Z",
-      "updatedAt": "2026-08-14T23:27:57.245Z"
+      "updatedAt": "2026-08-14T23:29:09.495Z"
     },
     {
       "id": "cc45c668-33d9-44d2-a99f-6b7d23fe5079",
