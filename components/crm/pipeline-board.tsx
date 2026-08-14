@@ -78,7 +78,7 @@ export function PipelineBoard({
   const importRef = useRef<HTMLInputElement>(null);
 
   async function deleteItem(id: string) {
-    if (!confirm("Delete this substation from the pipeline?")) return;
+    if (!confirm("Delete this entry from the pipeline?")) return;
     try {
       const res = await fetch(`/api/pipeline?id=${encodeURIComponent(id)}`, { method: "DELETE" });
       const data = await res.json();
