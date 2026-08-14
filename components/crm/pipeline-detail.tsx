@@ -247,6 +247,15 @@ export function PipelineDetail({
         </DialogHeader>
 
         <div className="space-y-4">
+          {item.kind === "site" ? (
+            <div className="flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-sky-100 bg-sky-50/60 px-3 py-2 text-xs text-slate-600">
+              <Badge className="border-sky-200 bg-sky-50 text-sky-700">Site</Badge>
+              {item.apn ? <span>APN: {item.apn}</span> : null}
+              {item.mwRequested != null ? <span>MW requested: {item.mwRequested}</span> : null}
+              {item.expectedSubstation ? <span>Expected: {item.expectedSubstation}</span> : null}
+            </div>
+          ) : null}
+
           {/* Editable fields */}
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
