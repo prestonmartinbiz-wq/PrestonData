@@ -1,6 +1,36 @@
 {
   "items": [
     {
+      "substation": "ZZ Demo Substation",
+      "apn": "16204406012",
+      "address": "2441 WESTERN",
+      "isd": "Q3 2027",
+      "peakDemand": "40 MW",
+      "feeders": [
+        {
+          "id": "HI-1301",
+          "mva": 9
+        },
+        {
+          "id": "HI-1305",
+          "mva": 12
+        },
+        {
+          "id": "HI-1312",
+          "mva": 6
+        }
+      ],
+      "trenchingFt": 6000,
+      "trenchingSegments": 2,
+      "contactName": "Chad Jacks",
+      "contactEmail": "Chad.Jacks@nvenergy.com",
+      "emailSubject": "Re: NV Energy Power Availability request - Highland 40 MW",
+      "emailDate": "Wed, 13 Aug 2026 15:22:10 -0700",
+      "sourceFile": "sample-nve-request.eml",
+      "id": "5c1aee32-8511-4915-952c-b6300f821b5c",
+      "createdAt": "2026-08-14T18:12:37.259Z"
+    },
+    {
       "id": "pw-polaris-4424",
       "substation": "Polaris",
       "apn": "16220214002",
@@ -8,10 +38,22 @@
       "isd": "Q2 2028",
       "peakDemand": "20 MW and 25 MW",
       "feeders": [
-        { "id": "POL-1201", "mva": 5 },
-        { "id": "POL-1205", "mva": 8 },
-        { "id": "POL-1212", "mva": 7 },
-        { "id": "POL-1215", "mva": 5 }
+        {
+          "id": "POL-1201",
+          "mva": 5
+        },
+        {
+          "id": "POL-1205",
+          "mva": 8
+        },
+        {
+          "id": "POL-1212",
+          "mva": 7
+        },
+        {
+          "id": "POL-1215",
+          "mva": 5
+        }
       ],
       "trenchingFt": 5000,
       "trenchingSegments": 4,
@@ -30,9 +72,18 @@
       "isd": "Q3 2027",
       "peakDemand": "10 MW",
       "feeders": [
-        { "id": "ER-1211", "mva": 5 },
-        { "id": "HI-1228", "mva": 5 },
-        { "id": "HI-1128", "mva": null }
+        {
+          "id": "ER-1211",
+          "mva": 5
+        },
+        {
+          "id": "HI-1228",
+          "mva": 5
+        },
+        {
+          "id": "HI-1128",
+          "mva": null
+        }
       ],
       "trenchingFt": 2900,
       "trenchingSegments": 4,
@@ -170,8 +221,14 @@
       "isd": "",
       "peakDemand": "5 MVA (2 x 2.5 MVA)",
       "feeders": [
-        { "id": "Craig-1205", "mva": 2.5 },
-        { "id": "Craig-1213", "mva": 2.5 }
+        {
+          "id": "Craig-1205",
+          "mva": 2.5
+        },
+        {
+          "id": "Craig-1213",
+          "mva": 2.5
+        }
       ],
       "trenchingFt": 400,
       "trenchingSegments": 2,
