@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
           ? body.documents
           : defaultDocuments(type),
       milestones: Array.isArray(body.milestones) ? body.milestones : [],
+      diagrams: Array.isArray(body.diagrams) ? body.diagrams : [],
       createdBy: user.email || user.userId || "",
       createdAt: now,
       updatedAt: now,

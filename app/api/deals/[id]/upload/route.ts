@@ -61,6 +61,23 @@ export async function POST(req: NextRequest, ctx: RouteCtx) {
         notFound = true;
         return list;
       }
+      // Diagrams are images shown at the top of the deal / in exports.
+      if (key === "diagram") {
+        const diagrams = [
+          ...(list[idx].diagrams || []),
+          {
+            id: randomUUID(),
+            url: stored.url,
+            name: file.name,
+            caption: label || "",
+            source: "upload",
+          },
+        ];
+        deal = { ...list[idx], diagrams, updatedAt: now };
+        const next = [...list];
+        next[idx] = deal;
+        return next;
+      }
       const docs = [...(list[idx].documents || [])];
       const dIdx = docs.findIndex((d) => d.key === key);
       const patch = {

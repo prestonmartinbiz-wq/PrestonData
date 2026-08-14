@@ -10,6 +10,7 @@ import {
   Check,
   ExternalLink,
   FileText,
+  Image as ImageIcon,
   Paperclip,
   Plus,
   Trash2,
@@ -162,6 +163,15 @@ export function DealDetail({
   const [expandedResp, setExpandedResp] = useState<string | null>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const [uploadKey, setUploadKey] = useState<string>("");
+
+  // Diagram images that came from the linked substation's NVE emails (Chad's
+  // site / power-line screenshots), shown read-only alongside uploaded ones.
+  const nveImages = Array.from(
+    new Set([
+      ...((substation?.images as string[] | undefined) || []),
+      ...((substation?.responses || []).flatMap((r) => r.images || [])),
+    ])
+  );
 
   async function patchDeal(patch: Partial<Deal>, quiet = false): Promise<boolean> {
     setBusy(true);
@@ -364,6 +374,21 @@ export function DealDetail({
   }
   async function deleteMilestone(id: string) {
     await patchDeal({ milestones: deal.milestones.filter((m) => m.id !== id) });
+  }
+
+  // Diagrams -------------------------------------------------------------
+  async function addDiagramLink() {
+    const url = prompt("Paste an image URL for the diagram");
+    if (!url || !url.trim()) return;
+    const next = [
+      ...(deal.diagrams || []),
+      { id: uid(), url: url.trim(), name: "", caption: "", source: "link" },
+    ];
+    await patchDeal({ diagrams: next });
+  }
+  async function deleteDiagram(id: string) {
+    if (!confirm("Remove this diagram?")) return;
+    await patchDeal({ diagrams: (deal.diagrams || []).filter((d) => d.id !== id) });
   }
 
   const typeLabel =
@@ -579,9 +604,72 @@ export function DealDetail({
             {deal.summary ? (
               <p className="whitespace-pre-wrap text-sm text-slate-700">{deal.summary}</p>
             ) : null}
-            {deal.address ? (
-              <GoogleMapEmbed query={deal.address} height={220} label={deal.name} />
-            ) : null}
+
+            <div className="grid gap-3 lg:grid-cols-2">
+              {deal.address ? (
+                <GoogleMapEmbed query={deal.address} height={260} label={deal.name} />
+              ) : (
+                <div className="hidden lg:block" />
+              )}
+              <div className="rounded-xl border border-slate-200 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <ImageIcon className="h-4 w-4 text-slate-400" /> Site &amp; power diagrams
+                  </h3>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => triggerUpload("diagram")} disabled={busy}>
+                      <Upload className="h-3.5 w-3.5" /> Upload
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={addDiagramLink}>
+                      <Plus className="h-3.5 w-3.5" /> Link
+                    </Button>
+                  </div>
+                </div>
+                {(deal.diagrams || []).length || nveImages.length ? (
+                  <div className="grid max-h-[260px] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+                    {(deal.diagrams || []).map((d) => (
+                      <div key={d.id} className="group relative">
+                        <a href={d.url} target="_blank" rel="noreferrer">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={d.url}
+                            alt={d.caption || d.name || "diagram"}
+                            className="h-24 w-full rounded-lg border border-slate-200 object-cover"
+                            loading="lazy"
+                          />
+                        </a>
+                        <button
+                          onClick={() => deleteDiagram(d.id)}
+                          className="absolute right-1 top-1 hidden rounded bg-white/90 p-0.5 text-slate-500 shadow group-hover:block"
+                          title="Remove"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    {nveImages.map((src) => (
+                      <a key={src} href={src} target="_blank" rel="noreferrer" className="relative block">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={src}
+                          alt="NVE diagram"
+                          className="h-24 w-full rounded-lg border border-amber-200 object-cover"
+                          loading="lazy"
+                        />
+                        <span className="absolute left-1 top-1 rounded bg-amber-500/90 px-1 text-[10px] font-medium text-white">
+                          NVE
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="py-6 text-center text-xs text-slate-500">
+                    No diagrams yet. Upload the NVE power diagram or paste an image link.
+                    {substation ? " Diagrams from this substation's NVE emails also appear here." : ""}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </Section>

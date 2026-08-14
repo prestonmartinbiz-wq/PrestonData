@@ -359,6 +359,17 @@ export type DealMilestone = {
   note: string;
 };
 
+/** A site / power-line diagram image (from an NVE email or uploaded directly). */
+export type DealDiagram = {
+  id: string;
+  /** Stored image URL (blob/local) or an external image URL. */
+  url: string;
+  name: string;
+  caption: string;
+  /** Where it came from, e.g. "NVE email" or "upload". */
+  source: string;
+};
+
 export type Deal = {
   id: string;
   name: string;
@@ -377,6 +388,8 @@ export type Deal = {
   contacts: DealContact[];
   documents: DealDocument[];
   milestones: DealMilestone[];
+  /** Site & power-line diagrams shown at the top of the deal and in exports. */
+  diagrams: DealDiagram[];
   createdBy: string;
   createdAt: string;
   updatedAt: string;

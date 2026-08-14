@@ -87,6 +87,7 @@ export function DealsBoard({
     keyDate: "",
     summary: "",
   });
+  const [diagramFiles, setDiagramFiles] = useState<FileList | null>(null);
 
   const active = useMemo(
     () => items.filter((d) => d.stage !== "dead" && d.stage !== "closed"),
@@ -115,7 +116,26 @@ export function DealsBoard({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
-      setItems(data.items);
+      let items = data.items as Deal[];
+
+      // Upload any power diagrams selected during creation.
+      if (diagramFiles && diagramFiles.length && data.item?.id) {
+        for (const file of Array.from(diagramFiles)) {
+          const form = new FormData();
+          form.append("file", file);
+          form.append("key", "diagram");
+          const up = await fetch(`/api/deals/${data.item.id}/upload`, {
+            method: "POST",
+            body: form,
+          });
+          const upd = await up.json();
+          if (up.ok && upd.items) items = upd.items;
+          else if (!up.ok)
+            toast.error(upd.error || "Diagram upload failed (deal was created)");
+        }
+      }
+
+      setItems(items);
       setOpen(false);
       setDraft({
         name: "",
@@ -128,6 +148,7 @@ export function DealsBoard({
         keyDate: "",
         summary: "",
       });
+      setDiagramFiles(null);
       toast.success("Deal created");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
@@ -345,6 +366,19 @@ export function DealsBoard({
                 onChange={(e) => setDraft({ ...draft, summary: e.target.value })}
                 placeholder="High level: what is this deal, how much power, current status…"
               />
+            </div>
+            <div className="col-span-2">
+              <Label htmlFor="deal-diagrams">Power diagram(s) from NVE (optional)</Label>
+              <Input
+                id="deal-diagrams"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => setDiagramFiles(e.target.files)}
+              />
+              <p className="mt-1 text-xs text-slate-400">
+                Site / power-line screenshots. You can also add more after creating the deal.
+              </p>
             </div>
           </div>
           <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
