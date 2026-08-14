@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft,
+  BookOpen,
   Check,
   ExternalLink,
   FileText,
@@ -59,6 +60,43 @@ function fmtDate(iso: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString();
+}
+
+/** Resolve how to display an OM (uploaded file or external link) inline. */
+function omEmbed(
+  doc?: DealDocument
+): { kind: "frame" | "download" | "link"; src: string } | null {
+  if (!doc) return null;
+  const url = (doc.fileUrl || "").trim();
+  const link = (doc.link || "").trim();
+  const name = (doc.fileName || url).toLowerCase();
+  if (url) {
+    if (name.endsWith(".pdf") || /\.pdf(\?|$)/.test(url.toLowerCase())) {
+      return { kind: "frame", src: url };
+    }
+    if (/\.pptx?(\?|$)/.test(name)) {
+      return /^https?:\/\//.test(url)
+        ? {
+            kind: "frame",
+            src: `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`,
+          }
+        : { kind: "download", src: url };
+    }
+    return { kind: "frame", src: url };
+  }
+  if (link) {
+    const drive = /drive\.google\.com\/file\/d\/([^/]+)/.exec(link);
+    if (drive) return { kind: "frame", src: `https://drive.google.com/file/d/${drive[1]}/preview` };
+    if (/\.pdf(\?|$)/i.test(link)) return { kind: "frame", src: link };
+    if (/\.pptx?(\?|$)/i.test(link)) {
+      return {
+        kind: "frame",
+        src: `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(link)}`,
+      };
+    }
+    return { kind: "link", src: link };
+  }
+  return null;
 }
 
 function docStatusClass(status: DealDocStatus): string {
@@ -231,6 +269,34 @@ export function DealDetail({
     );
     await patchDeal({ documents: next }, true);
   }
+  async function updateOm(patch: Partial<DealDocument>) {
+    const existing = deal.documents.find((d) => d.key === "om");
+    const now = new Date().toISOString();
+    const next = existing
+      ? deal.documents.map((d) =>
+          d.key === "om"
+            ? { ...d, ...patch, updatedAt: now, updatedBy: currentUser || d.updatedBy }
+            : d
+        )
+      : [
+          ...deal.documents,
+          {
+            id: uid(),
+            key: "om",
+            label: "Offering Memorandum (OM)",
+            status: "needed" as DealDocStatus,
+            fileUrl: "",
+            fileName: "",
+            link: "",
+            note: "",
+            updatedAt: now,
+            updatedBy: currentUser || "",
+            ...patch,
+          },
+        ];
+    await patchDeal({ documents: next }, true);
+  }
+
   async function addOtherDoc() {
     const label = prompt("Document name?");
     if (!label || !label.trim()) return;
@@ -265,6 +331,7 @@ export function DealDetail({
       const form = new FormData();
       form.append("file", file);
       form.append("key", uploadKey);
+      if (uploadKey === "om") form.append("label", "Offering Memorandum (OM)");
       const res = await fetch(`/api/deals/${deal.id}/upload`, {
         method: "POST",
         body: form,
@@ -519,6 +586,84 @@ export function DealDetail({
         )}
       </Section>
 
+      {/* Offering Memorandum */}
+      {(() => {
+        const om = deal.documents.find((d) => d.key === "om");
+        const view = omEmbed(om);
+        return (
+          <Section
+            title="Offering Memorandum (OM)"
+            icon={<BookOpen className="h-4 w-4 text-slate-400" />}
+            action={
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => triggerUpload("om")}
+                disabled={busy}
+              >
+                <Upload className="h-4 w-4" /> Upload PDF / PPT
+              </Button>
+            }
+          >
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  className="h-8 max-w-md text-xs"
+                  placeholder="…or paste a link (e.g. Google Drive)"
+                  defaultValue={om?.link || ""}
+                  onBlur={(e) => {
+                    if (e.target.value.trim() !== (om?.link || ""))
+                      updateOm({ link: e.target.value.trim() });
+                  }}
+                />
+                {om?.fileName ? (
+                  <a
+                    href={om.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-sky-700 hover:underline"
+                  >
+                    <Paperclip className="h-3 w-3" /> {om.fileName}
+                  </a>
+                ) : null}
+              </div>
+
+              {view ? (
+                view.kind === "frame" ? (
+                  <iframe
+                    title="Offering Memorandum"
+                    src={view.src}
+                    className="h-[600px] w-full rounded-lg border border-slate-200 bg-white"
+                  />
+                ) : view.kind === "download" ? (
+                  <a
+                    href={view.src}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                  >
+                    <ExternalLink className="h-4 w-4" /> Download / open OM
+                  </a>
+                ) : (
+                  <a
+                    href={view.src}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                  >
+                    <ExternalLink className="h-4 w-4" /> Open OM
+                  </a>
+                )
+              ) : (
+                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50/60 p-6 text-center text-sm text-slate-500">
+                  No OM yet. Upload a PDF/PPT or paste a link to view it here.
+                </div>
+              )}
+            </div>
+          </Section>
+        );
+      })()}
+
       {/* Contacts */}
       <Section
         title={`Owner / stakeholder contacts (${deal.contacts.length})`}
@@ -572,7 +717,9 @@ export function DealDetail({
         }
       >
         <div className="space-y-2">
-          {deal.documents.map((d) => (
+          {deal.documents
+            .filter((d) => d.key !== "om")
+            .map((d) => (
             <div
               key={d.id}
               className="rounded-lg border border-slate-100 bg-slate-50/50 p-3"

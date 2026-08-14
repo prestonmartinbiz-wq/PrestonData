@@ -44,7 +44,8 @@ function defaultDocuments(type: DealType): DealDocument[] {
     type === "under_contract"
       ? mk("psa", "Purchase & Sale Agreement (PSA)")
       : mk("contract", "Landowner agreement / contract");
-  return [agreement, ...DEAL_DOC_CHECKLIST.map((c) => mk(c.key, c.label))];
+  const om = mk("om", "Offering Memorandum (OM)");
+  return [agreement, om, ...DEAL_DOC_CHECKLIST.map((c) => mk(c.key, c.label))];
 }
 
 export async function GET() {
