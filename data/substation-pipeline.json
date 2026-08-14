@@ -6,13 +6,13 @@
       "address": "",
       "latitude": "",
       "longitude": "",
-      "status": "to_be_searched",
+      "status": "awaiting_nve_response",
       "submittedBy": "demo@local.dev",
       "dateAdded": "2026-08-14T00:08:52.962Z",
       "justification": "",
       "priority": "Medium",
-      "assignedEe": "",
-      "dateStudySubmittedToNve": "",
+      "assignedEe": "demo@local.dev",
+      "dateStudySubmittedToNve": "2026-08-14",
       "nveResponseRaw": "",
       "mwAvailable": null,
       "peakDemand": "",
@@ -27,7 +27,7 @@
       "responses": [],
       "images": [],
       "createdAt": "2026-08-14T00:08:52.962Z",
-      "updatedAt": "2026-08-14T00:08:52.962Z"
+      "updatedAt": "2026-08-14T00:09:28.707Z"
     },
     {
       "id": "85b78ef9-7222-4fb1-8db4-b5f9de72938f",
