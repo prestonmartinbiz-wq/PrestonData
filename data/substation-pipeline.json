@@ -1,6 +1,82 @@
 {
   "items": [
     {
+      "id": "a9bca7e3-117e-4988-86e6-4e0ff216e007",
+      "kind": "substation",
+      "name": "ZZ Video Demo",
+      "address": "",
+      "latitude": "",
+      "longitude": "",
+      "status": "confirmed",
+      "submittedBy": "demo@local.dev",
+      "dateAdded": "2026-08-14T18:18:28.171Z",
+      "justification": "",
+      "priority": "Medium",
+      "assignedEe": "demo@local.dev",
+      "dateStudySubmittedToNve": "",
+      "nveResponseRaw": "Hi Preston,\n\nFollowing up on your second request for the Highland area.\n\nSubstation: Highland\nAPN: 16204406012, 2441 WESTERN\nISD: Q3 2027\nPeak Demand: 40 MW\n\nWe can support the following feeders:\nHI-1301, 9 MVA: Install a new switch and reconductor the getaway.\nHI-1305, 12 MVA: Available after the 2027 rebuild.\nHI-1312, 6 MVA: Requires 3,000 ft of trenching along Western Ave.\n\nThere is a long-lead item on the 40 MVA transformer (approx 18 month lead time).\n\nTotal of 3,000 ft of trenching is required.\n\nThank you,\nChad Jacks | NV Energy\nEmail: Chad.Jacks@nvenergy.com",
+      "mwAvailable": 40,
+      "peakDemand": "40 MW",
+      "feeders": [
+        {
+          "id": "HI-1301",
+          "mva": 9
+        },
+        {
+          "id": "HI-1305",
+          "mva": 12
+        },
+        {
+          "id": "HI-1312",
+          "mva": 6
+        }
+      ],
+      "trenchingFt": 6000,
+      "isdDate": "2027-07-01",
+      "longLeadItems": [
+        "There is a long-lead item on the 40 MVA transformer (approx 18 month lead time)."
+      ],
+      "longLeadPresent": true,
+      "compositeScore": 75,
+      "dateResponseReceived": "2026-08-14T18:18:28.171Z",
+      "notes": "",
+      "responses": [
+        {
+          "id": "62aff964-f868-4980-8ada-56d0fa6a1676",
+          "subject": "Re: NV Energy Power Availability request - Highland 40 MW",
+          "date": "Wed, 13 Aug 2026 15:22:10 -0700",
+          "from": "Chad Jacks <Chad.Jacks@nvenergy.com>",
+          "text": "Hi Preston,\n\nFollowing up on your second request for the Highland area.\n\nSubstation: Highland\nAPN: 16204406012, 2441 WESTERN\nISD: Q3 2027\nPeak Demand: 40 MW\n\nWe can support the following feeders:\nHI-1301, 9 MVA: Install a new switch and reconductor the getaway.\nHI-1305, 12 MVA: Available after the 2027 rebuild.\nHI-1312, 6 MVA: Requires 3,000 ft of trenching along Western Ave.\n\nThere is a long-lead item on the 40 MVA transformer (approx 18 month lead time).\n\nTotal of 3,000 ft of trenching is required.\n\nThank you,\nChad Jacks | NV Energy\nEmail: Chad.Jacks@nvenergy.com",
+          "mwAvailable": 40,
+          "peakDemand": "40 MW",
+          "isdDate": "2027-07-01",
+          "feeders": [
+            {
+              "id": "HI-1301",
+              "mva": 9
+            },
+            {
+              "id": "HI-1305",
+              "mva": 12
+            },
+            {
+              "id": "HI-1312",
+              "mva": 6
+            }
+          ],
+          "trenchingFt": 6000,
+          "longLeadItems": [
+            "There is a long-lead item on the 40 MVA transformer (approx 18 month lead time)."
+          ],
+          "images": [],
+          "sourceFile": "sample-nve-request.eml"
+        }
+      ],
+      "images": [],
+      "createdAt": "2026-08-14T18:18:28.171Z",
+      "updatedAt": "2026-08-14T18:18:28.171Z"
+    },
+    {
       "id": "5feacdc6-1360-490d-b5b0-8c641c4bd1fc",
       "kind": "site",
       "name": "7777 Demo Blvd, Las Vegas",
