@@ -1,6 +1,40 @@
 {
   "items": [
     {
+      "substation": "Highland / El Rancho",
+      "apn": "16209110010",
+      "address": "2650 Westwood Dr.",
+      "isd": "",
+      "peakDemand": "Availability request - RE: Re: I submitted these 3 together - LM Construction",
+      "feeders": [
+        {
+          "id": "HI-1205",
+          "mva": null
+        },
+        {
+          "id": "HI-1222",
+          "mva": null
+        },
+        {
+          "id": "HI-1225",
+          "mva": null
+        },
+        {
+          "id": "HI-1228",
+          "mva": null
+        }
+      ],
+      "trenchingFt": 4400,
+      "trenchingSegments": 8,
+      "contactName": "Chad Jacks",
+      "contactEmail": "Chad.Jacks@nvenergy.com",
+      "emailSubject": "FW: [INTERNET] Re: NV Energy Power Availability request - RE: Re: I submitted these 3 together - LM Construction",
+      "emailDate": "Fri, 14 Aug 2026 17:18:07 +0000",
+      "sourceFile": "FW_ [INTERNET] Re_ NV Energy Power Availability request - RE_ Re_ I submitted these 3 together - LM Construction .eml",
+      "id": "98b18e81-8a5a-43e2-aaed-d104c0ba0b7e",
+      "createdAt": "2026-08-14T18:41:16.279Z"
+    },
+    {
       "id": "pw-polaris-4424",
       "substation": "Polaris",
       "apn": "16220214002",
