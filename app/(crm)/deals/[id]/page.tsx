@@ -21,10 +21,18 @@ export default async function DealDetailPage({
   if (!deal) notFound();
 
   // Attach the matching pipeline substation so we can show Chad's NVE emails.
+  // Several substations can share a name; prefer the one that actually has
+  // pulls/data so the deal shows the real emails.
   const sub = deal.substation
-    ? pipeline.find(
-        (p) => p.name.trim().toLowerCase() === deal.substation.trim().toLowerCase()
-      ) || null
+    ? pipeline
+        .filter(
+          (p) => p.name.trim().toLowerCase() === deal.substation.trim().toLowerCase()
+        )
+        .sort(
+          (a, b) =>
+            (b.responses?.length || 0) - (a.responses?.length || 0) ||
+            (b.mwAvailable ?? 0) - (a.mwAvailable ?? 0)
+        )[0] || null
     : null;
 
   const substationNames = Array.from(
