@@ -266,9 +266,13 @@ export const PIPELINE_PRIORITIES: PipelinePriority[] = ["High", "Medium", "Low"]
  * due dates; "landowner_relationship" deals (owner lets us do the work) are
  * softer and may or may not have a contract.
  */
-export type DealType = "under_contract" | "landowner_relationship";
+export type DealType =
+  | "negotiating"
+  | "under_contract"
+  | "landowner_relationship";
 
 export const DEAL_TYPES: { value: DealType; label: string }[] = [
+  { value: "negotiating", label: "Negotiating" },
   { value: "under_contract", label: "Under contract (PSA)" },
   { value: "landowner_relationship", label: "Landowner relationship" },
 ];

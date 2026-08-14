@@ -570,7 +570,9 @@ export function DealDetail({
                 className={
                   deal.type === "under_contract"
                     ? "border-rose-200 bg-rose-50 text-rose-700"
-                    : "border-slate-200 bg-slate-50 text-slate-600"
+                    : deal.type === "negotiating"
+                      ? "border-amber-200 bg-amber-50 text-amber-800"
+                      : "border-slate-200 bg-slate-50 text-slate-600"
                 }
               >
                 {typeLabel}

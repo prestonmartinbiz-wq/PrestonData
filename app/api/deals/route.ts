@@ -13,7 +13,11 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const TYPES: DealType[] = ["under_contract", "landowner_relationship"];
+const TYPES: DealType[] = [
+  "negotiating",
+  "under_contract",
+  "landowner_relationship",
+];
 const STAGES: DealStage[] = [
   "prospecting",
   "negotiating",
@@ -43,7 +47,9 @@ function defaultDocuments(type: DealType): DealDocument[] {
   const agreement =
     type === "under_contract"
       ? mk("psa", "Purchase & Sale Agreement (PSA)")
-      : mk("contract", "Landowner agreement / contract");
+      : type === "negotiating"
+        ? mk("agreement", "Draft agreement / LOI")
+        : mk("contract", "Landowner agreement / contract");
   const om = mk("om", "Offering Memorandum (OM)");
   return [agreement, om, ...DEAL_DOC_CHECKLIST.map((c) => mk(c.key, c.label))];
 }

@@ -34,6 +34,17 @@ const STAGE_LABEL: Record<DealStage, string> = Object.fromEntries(
   DEAL_STAGES.map((s) => [s.value, s.label])
 ) as Record<DealStage, string>;
 
+function typeBadge(type: DealType): { cls: string; label: string } {
+  const label = DEAL_TYPES.find((t) => t.value === type)?.label || type;
+  const cls =
+    type === "under_contract"
+      ? "border-rose-200 bg-rose-50 text-rose-700"
+      : type === "negotiating"
+        ? "border-amber-200 bg-amber-50 text-amber-800"
+        : "border-slate-200 bg-slate-50 text-slate-600";
+  return { cls, label };
+}
+
 function stageBadgeClass(stage: DealStage): string {
   switch (stage) {
     case "submitted":
@@ -172,14 +183,8 @@ export function DealsBoard({
               <Badge className={stageBadgeClass(deal.stage)}>
                 {STAGE_LABEL[deal.stage]}
               </Badge>
-              <Badge
-                className={
-                  deal.type === "under_contract"
-                    ? "border-rose-200 bg-rose-50 text-rose-700"
-                    : "border-slate-200 bg-slate-50 text-slate-600"
-                }
-              >
-                {deal.type === "under_contract" ? "Under contract" : "Landowner"}
+              <Badge className={typeBadge(deal.type).cls}>
+                {typeBadge(deal.type).label}
               </Badge>
             </div>
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
