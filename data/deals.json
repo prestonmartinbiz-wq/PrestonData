@@ -142,11 +142,18 @@
           "name": "10 MW.png",
           "caption": "",
           "source": "upload"
+        },
+        {
+          "id": "d0078bea-8e39-4bd1-84aa-ed41b19350ea",
+          "url": "https://fzwtye8vohqhnc6g.public.blob.vercel-storage.com/deal-docs/b7d9c22c-1f92-44d8-8d3f-d1bb3664b445/diagram-5_MW-oFNa82EMnm0SVyhKIqqrYyWc0M0R4Y.png",
+          "name": "5 MW.png",
+          "caption": "",
+          "source": "upload"
         }
       ],
       "createdBy": "demo@local.dev",
       "createdAt": "2026-08-14T23:27:57.245Z",
-      "updatedAt": "2026-08-14T23:29:09.495Z"
+      "updatedAt": "2026-08-14T23:29:23.140Z"
     },
     {
       "id": "cc45c668-33d9-44d2-a99f-6b7d23fe5079",
