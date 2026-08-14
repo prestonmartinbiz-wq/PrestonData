@@ -29,13 +29,13 @@
           "id": "fb409717-5ee0-4f6a-8320-18f038f942b5",
           "key": "om",
           "label": "Offering Memorandum (OM)",
-          "status": "needed",
-          "fileUrl": "",
-          "fileName": "",
+          "status": "received",
+          "fileUrl": "https://fzwtye8vohqhnc6g.public.blob.vercel-storage.com/deal-docs/b7d9c22c-1f92-44d8-8d3f-d1bb3664b445/om-View_the_Brochure_for_Nellis_Logistics_Center_-_2327_N_Nellis_Blvd-nxrd7uuBvXXfdhrensbzZ9HJs2smTk.pdf",
+          "fileName": "View the Brochure for Nellis Logistics Center - 2327 N Nellis Blvd.pdf",
           "link": "",
           "note": "",
-          "updatedAt": "2026-08-14T23:27:57.245Z",
-          "updatedBy": ""
+          "updatedAt": "2026-08-14T23:29:38.206Z",
+          "updatedBy": "demo@local.dev"
         },
         {
           "id": "488c627b-4b58-491b-a871-1d0f6f839d54",
@@ -153,7 +153,7 @@
       ],
       "createdBy": "demo@local.dev",
       "createdAt": "2026-08-14T23:27:57.245Z",
-      "updatedAt": "2026-08-14T23:29:23.140Z"
+      "updatedAt": "2026-08-14T23:29:38.206Z"
     },
     {
       "id": "cc45c668-33d9-44d2-a99f-6b7d23fe5079",
