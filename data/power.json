@@ -1,6 +1,32 @@
 {
   "items": [
     {
+      "substation": "Sahara",
+      "apn": "16208103001",
+      "address": "3325 W Sahara Ave.",
+      "isd": "Q3 2027",
+      "peakDemand": "5 MW and 8 MW",
+      "feeders": [
+        {
+          "id": "TA-1205",
+          "mva": null
+        },
+        {
+          "id": "TA-1210",
+          "mva": null
+        }
+      ],
+      "trenchingFt": 300,
+      "trenchingSegments": 1,
+      "contactName": "Chad Jacks",
+      "contactEmail": "Chad.Jacks@nvenergy.com",
+      "emailSubject": "NV Energy Power Availability request - Lewis Management RE: Power Request: 3325 W SAHARA AVE (5 / 8 mgs)",
+      "emailDate": "Wed, 22 Jul 2026 18:28:08 +0000",
+      "sourceFile": "NV Energy Power Availability request - Lewis Management RE_ Power Request_ 3325 W SAHARA AVE (5 _ 8 mgs).eml",
+      "id": "6dc310c4-5c75-4240-8c27-ae8eef67d15e",
+      "createdAt": "2026-08-14T21:04:50.930Z"
+    },
+    {
       "substation": "Highland / El Rancho",
       "apn": "16209110010",
       "address": "2650 Westwood Dr.",
