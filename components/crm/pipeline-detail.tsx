@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2, Zap } from "lucide-react";
+import { Check, Copy, Mail, Pencil, Plus, Trash2, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,34 @@ function fmtDate(iso: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString();
+}
+
+/** Short ISD for the NVE email: ISO dates -> M/YY (e.g. 2027-08-01 -> 8/27). */
+function fmtIsdShort(isd: string): string {
+  if (!isd) return "";
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(isd);
+  if (iso) return `${Number(iso[2])}/${iso[1].slice(2)}`;
+  return isd.trim();
+}
+
+/** Build the site-specific power-availability email to NVE (Chad). */
+function buildNveEmail(item: PipelineSubstation): string {
+  const apn = (item.apn || "").trim();
+  const address = (item.address || "").trim();
+  const load = item.mwRequested ?? item.mwAvailable ?? null;
+  const isd = fmtIsdShort(item.isdDate);
+  const lines = ["Hi Chad,", "", "Hope you are well.", ""];
+  const apnLine =
+    apn && address
+      ? `APN: ${apn}, ${address}`
+      : apn
+        ? `APN: ${apn}`
+        : address || "";
+  if (apnLine) lines.push(apnLine);
+  if (load != null) lines.push(`Load: ${load} MW`);
+  if (isd) lines.push(`ISD: ${isd}`);
+  lines.push("", "Best,");
+  return lines.join("\n");
 }
 
 /** Small read-only label/value pair. */
@@ -148,6 +176,55 @@ export function PipelineDetail({
   const [adding, setAdding] = useState(false);
   const [responses, setResponses] = useState<PipelineResponse[]>(item.responses || []);
   const images = item.images || [];
+
+  const [showEmail, setShowEmail] = useState(false);
+  const [emailText, setEmailText] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  function generateEmail() {
+    setEmailText(buildNveEmail(item));
+    setShowEmail(true);
+    setCopied(false);
+  }
+
+  async function copyEmail() {
+    try {
+      await navigator.clipboard.writeText(emailText);
+      setCopied(true);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Couldn't copy — select the text and copy manually");
+    }
+  }
+
+  async function markSentToNve() {
+    setSending(true);
+    try {
+      const res = await fetch("/api/pipeline", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: item.id,
+          patch: {
+            status: "awaiting_nve_response",
+            dateStudySubmittedToNve: new Date().toISOString().slice(0, 10),
+            assignedEe: item.assignedEe || currentUser || "",
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      onUpdated(data.items);
+      toast.success("Sent — moved to Awaiting NVE response");
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setSending(false);
+    }
+  }
 
   async function save() {
     setSaving(true);
@@ -423,6 +500,56 @@ export function PipelineDetail({
               ) : null}
             </div>
           )}
+
+          {/* Email to NVE (Chad) */}
+          <div className="space-y-2 border-t border-slate-100 pt-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <Mail className="h-4 w-4 text-slate-400" /> Email to NVE
+              </h3>
+              {!showEmail ? (
+                <Button size="sm" variant="outline" onClick={generateEmail}>
+                  <Mail className="h-4 w-4" /> Generate email to NVE
+                </Button>
+              ) : null}
+            </div>
+            {showEmail ? (
+              <div className="space-y-2">
+                <Textarea
+                  rows={9}
+                  readOnly
+                  value={emailText}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="font-mono text-xs"
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" variant="secondary" onClick={copyEmail}>
+                    {copied ? (
+                      <>
+                        <Check className="h-4 w-4" /> Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4" /> Copy
+                      </>
+                    )}
+                  </Button>
+                  {item.status === "to_be_searched" ? (
+                    <Button size="sm" onClick={markSentToNve} disabled={sending}>
+                      {sending ? "Sending…" : "Mark sent → move to queue"}
+                    </Button>
+                  ) : (
+                    <span className="self-center text-xs text-slate-400">
+                      {STATUS_LABEL[item.status]}
+                    </span>
+                  )}
+                  <Button size="sm" variant="ghost" onClick={() => setShowEmail(false)}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </div>
 
           {/* Responses / pulls (always visible, read-only) */}
           <div className="space-y-2 border-t border-slate-100 pt-3">
