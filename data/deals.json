@@ -4,7 +4,7 @@
       "id": "6d93916c-3709-4bd1-b47a-2cbbbf600cdf",
       "name": "Nellis 1 acre land",
       "type": "negotiating",
-      "stage": "secured",
+      "stage": "prospecting",
       "apn": "140-16-401-014",
       "address": "",
       "substation": "",
@@ -138,7 +138,7 @@
       "diagrams": [],
       "createdBy": "demo@local.dev",
       "createdAt": "2026-08-15T01:16:27.392Z",
-      "updatedAt": "2026-08-15T01:16:27.392Z"
+      "updatedAt": "2026-08-15T04:10:40.185Z"
     },
     {
       "id": "91190d3b-0750-49a4-a115-fd2ddecdea60",
