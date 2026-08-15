@@ -260,8 +260,18 @@ export function MarkersMap({
     setExpSub("");
   }, []);
 
-  async function addSiteFromParcel() {
-    if (!parcel) return;
+  async function addSite(input: {
+    apn: string;
+    lat: number;
+    lng: number;
+    address?: string;
+    expectedSubstation?: string;
+    ownerLlc?: string;
+  }): Promise<boolean> {
+    if (!input.apn) {
+      toast.error("No APN for this parcel");
+      return false;
+    }
     setSavingSite(true);
     try {
       const res = await fetch("/api/pipeline", {
@@ -269,13 +279,13 @@ export function MarkersMap({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           kind: "site",
-          apn: parcel.apn,
-          name: `APN ${parcel.apn}`,
-          address: "",
-          latitude: String(parcel.lat),
-          longitude: String(parcel.lng),
-          expectedSubstation: expSub.trim(),
-          notes: llc.trim() ? `Owner/LLC: ${llc.trim()}` : "",
+          apn: input.apn,
+          name: input.address?.trim() || `APN ${input.apn}`,
+          address: input.address?.trim() || "",
+          latitude: String(input.lat),
+          longitude: String(input.lng),
+          expectedSubstation: (input.expectedSubstation || "").trim(),
+          notes: (input.ownerLlc || "").trim() ? `Owner/LLC: ${input.ownerLlc!.trim()}` : "",
           justification: "Added from map",
           priority: "Medium",
         }),
@@ -283,12 +293,38 @@ export function MarkersMap({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
       toast.success("Added to Sites of Interest");
-      setParcel(null);
+      return true;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
+      return false;
     } finally {
       setSavingSite(false);
     }
+  }
+
+  async function addSiteFromParcel() {
+    if (!parcel) return;
+    const ok = await addSite({
+      apn: parcel.apn,
+      lat: parcel.lat,
+      lng: parcel.lng,
+      expectedSubstation: expSub,
+      ownerLlc: llc,
+    });
+    if (ok) setParcel(null);
+  }
+
+  async function addSiteFromMarker(m: MapMarker) {
+    // Marker subtitle is "address · substation" — use its parts as hints.
+    const parts = (m.subtitle || "").split(" · ");
+    const ok = await addSite({
+      apn: m.id,
+      lat: m.lat,
+      lng: m.lng,
+      address: parts[0] || "",
+      expectedSubstation: parts.length > 1 ? parts[parts.length - 1] : "",
+    });
+    if (ok) setSelected(null);
   }
 
   const visible = useMemo(() => {
@@ -471,6 +507,17 @@ export function MarkersMap({
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   ) : null}
+                  {selected.kind === "parcel" ? (
+                    <button
+                      type="button"
+                      onClick={() => addSiteFromMarker(selected)}
+                      disabled={savingSite}
+                      className="mt-1 inline-flex w-full items-center justify-center gap-1 rounded bg-slate-900 px-2 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      {savingSite ? "Adding…" : "Add to interest list"}
+                    </button>
+                  ) : null}
                 </div>
               </InfoWindow>
             ) : null}
@@ -541,32 +588,35 @@ export function MarkersMap({
                     </a>
                   </div>
 
-                  {!parcel.tracked ? (
-                    <div className="space-y-1.5 border-t border-slate-100 pt-2">
-                      <input
-                        className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
-                        placeholder="Owner / LLC (optional)"
-                        value={llc}
-                        onChange={(e) => setLlc(e.target.value)}
-                      />
-                      <input
-                        className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
-                        placeholder="Expected substation (optional)"
-                        list="map-sub-names"
-                        value={expSub}
-                        onChange={(e) => setExpSub(e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        onClick={addSiteFromParcel}
-                        disabled={savingSite}
-                        className="inline-flex w-full items-center justify-center gap-1 rounded bg-slate-900 px-2 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        {savingSite ? "Adding…" : "Add to interest list"}
-                      </button>
-                    </div>
-                  ) : null}
+                  <div className="space-y-1.5 border-t border-slate-100 pt-2">
+                    {parcel.tracked ? (
+                      <p className="text-[11px] text-slate-500">
+                        Already in our system — you can still add it to the interest list.
+                      </p>
+                    ) : null}
+                    <input
+                      className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
+                      placeholder="Owner / LLC (optional)"
+                      value={llc}
+                      onChange={(e) => setLlc(e.target.value)}
+                    />
+                    <input
+                      className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
+                      placeholder="Expected substation (optional)"
+                      list="map-sub-names"
+                      value={expSub}
+                      onChange={(e) => setExpSub(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={addSiteFromParcel}
+                      disabled={savingSite}
+                      className="inline-flex w-full items-center justify-center gap-1 rounded bg-slate-900 px-2 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      {savingSite ? "Adding…" : "Add to interest list"}
+                    </button>
+                  </div>
                 </div>
               </InfoWindow>
             ) : null}
