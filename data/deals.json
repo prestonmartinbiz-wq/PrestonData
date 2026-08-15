@@ -8,7 +8,7 @@
       "apn": "162-20-212-00",
       "address": "4425 Polaris",
       "substation": "",
-      "mw": null,
+      "mw": 25,
       "summary": "Waiting for seller to sign PSA",
       "keyDate": "",
       "contacts": [],
@@ -138,7 +138,7 @@
       "diagrams": [],
       "createdBy": "demo@local.dev",
       "createdAt": "2026-08-15T00:02:10.635Z",
-      "updatedAt": "2026-08-15T00:03:48.750Z"
+      "updatedAt": "2026-08-15T00:16:22.012Z"
     },
     {
       "id": "b7d9c22c-1f92-44d8-8d3f-d1bb3664b445",
