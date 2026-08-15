@@ -51,6 +51,13 @@ export function parseLeadsCsv(csvText: string): Lead[] {
         lead.latitude || pick(row, ["latitude", "lat", "Lat"]);
       lead.longitude =
         lead.longitude || pick(row, ["longitude", "lng", "lon", "Long", "long"]);
+      // Seed the multi-phone list from legacy phone/altPhone when absent.
+      if (!(lead.phones || "").trim()) {
+        lead.phones = [lead.phone, lead.altPhone]
+          .map((p) => (p || "").trim())
+          .filter(Boolean)
+          .join("|");
+      }
       return lead;
     })
     .filter((l) => normalizeApn(l.apn));
@@ -66,6 +73,9 @@ export function leadsToCsv(leads: Lead[]): string {
     Phone: lead.phone,
     Email: lead.email,
     "Alt Phone": lead.altPhone,
+    Phones:
+      lead.phones ||
+      [lead.phone, lead.altPhone].map((p) => (p || "").trim()).filter(Boolean).join("|"),
     "Mailing / RA Address": lead.mailingAddress,
     Confidence: lead.confidence,
     Sources: lead.sources,

@@ -8,12 +8,32 @@ import {
 } from "@/lib/calls";
 import { callsToCsv, leadsToCsv, parseCallsCsv, parseLeadsCsv } from "@/lib/csv";
 import { hasGitHubToken, readGitHubFile, writeGitHubFile } from "@/lib/github";
-import type { CallRecord, Lead, SaveMeta, TeamData } from "@/lib/types";
+import type {
+  CallRecord,
+  Deal,
+  DealsData,
+  Lead,
+  PowerAvailability,
+  PowerData,
+  SaveMeta,
+  SubstationMeta,
+  SubstationsData,
+  PipelineSubstation,
+  PipelineData,
+  Task,
+  TasksData,
+  TeamData,
+} from "@/lib/types";
 import { normalizeApn } from "@/lib/utils";
 
 const LEADS_PATH = "data/leads.csv";
 const CALLS_PATH = "data/calls.csv";
 const TEAM_PATH = "data/team.json";
+const POWER_PATH = "data/power.json";
+const SUBSTATIONS_PATH = "data/substations.json";
+const TASKS_PATH = "data/tasks.json";
+const PIPELINE_PATH = "data/substation-pipeline.json";
+const DEALS_PATH = "data/deals.json";
 
 function localPath(rel: string) {
   // Scope to data/ so Turbopack does not trace the whole project
@@ -224,6 +244,65 @@ export async function getCallById(callId: string): Promise<CallRecord | null> {
   return calls.find((c) => c.callId === callId) || null;
 }
 
+/** Edit a logged call (for corrections) and recompute the lead's rollups. */
+export async function updateCall(
+  callId: string,
+  patch: Partial<
+    Pick<
+      CallRecord,
+      | "outcome"
+      | "calledAt"
+      | "callbackAt"
+      | "notes"
+      | "contactName"
+      | "phoneUsed"
+      | "caller"
+      | "durationSec"
+    >
+  >,
+  who = "crm"
+): Promise<{ call: CallRecord; calls: CallRecord[]; leads: Lead[] }> {
+  const [{ calls }, { leads }] = await Promise.all([loadCalls(), loadLeads()]);
+  const idx = calls.findIndex((c) => c.callId === callId);
+  if (idx === -1) throw new Error("Call not found");
+
+  const next = [...calls];
+  next[idx] = { ...calls[idx], ...patch, callId, apn: calls[idx].apn };
+
+  const key = normalizeApn(calls[idx].apn);
+  const nextLeads = [...leads];
+  const leadIdx = nextLeads.findIndex((l) => normalizeApn(l.apn) === key);
+  if (leadIdx !== -1) nextLeads[leadIdx] = applyRollupsToLead(nextLeads[leadIdx], next);
+
+  await Promise.all([
+    saveCalls(next, `Edit call ${callId} (${who})`),
+    leadIdx !== -1 ? saveLeads(nextLeads, `Recompute rollups after call edit (${who})`) : Promise.resolve(undefined),
+  ]);
+  return { call: next[idx], calls: next, leads: nextLeads };
+}
+
+/** Delete a logged call (for corrections) and recompute the lead's rollups. */
+export async function deleteCall(
+  callId: string,
+  who = "crm"
+): Promise<{ calls: CallRecord[]; leads: Lead[] }> {
+  const [{ calls }, { leads }] = await Promise.all([loadCalls(), loadLeads()]);
+  const target = calls.find((c) => c.callId === callId);
+  if (!target) throw new Error("Call not found");
+
+  const next = calls.filter((c) => c.callId !== callId);
+  const key = normalizeApn(target.apn);
+  const nextLeads = [...leads];
+  const leadIdx = nextLeads.findIndex((l) => normalizeApn(l.apn) === key);
+  if (leadIdx !== -1) nextLeads[leadIdx] = applyRollupsToLead(nextLeads[leadIdx], next);
+
+  await Promise.all([
+    saveCalls(next, `Delete call ${callId} (${who})`),
+    leadIdx !== -1 ? saveLeads(nextLeads, `Recompute rollups after call delete (${who})`) : Promise.resolve(undefined),
+  ]);
+  return { calls: next, leads: nextLeads };
+}
+
 export async function loadTeam(): Promise<{ team: TeamData; meta: SaveMeta }> {
   if (hasGitHubToken()) {
     try {
@@ -246,4 +325,223 @@ export async function saveTeam(
     return writeGitHubFile(TEAM_PATH, json, message);
   }
   return writeLocal(TEAM_PATH, json);
+}
+
+export async function loadPower(): Promise<{
+  power: PowerAvailability[];
+  meta: SaveMeta;
+}> {
+  try {
+    const { content, meta } = await readText(POWER_PATH);
+    const parsed = JSON.parse(content) as PowerData;
+    return { power: Array.isArray(parsed.items) ? parsed.items : [], meta };
+  } catch {
+    // No file yet (or unreadable) — treat as empty.
+    return { power: [], meta: { source: "local", path: POWER_PATH } };
+  }
+}
+
+export async function savePower(
+  power: PowerAvailability[],
+  message = "Update power.json via RMax CRM"
+): Promise<SaveMeta> {
+  const json = JSON.stringify({ items: power } satisfies PowerData, null, 2) + "\n";
+  if (hasGitHubToken()) {
+    return writeGitHubFile(POWER_PATH, json, message);
+  }
+  return writeLocal(POWER_PATH, json);
+}
+
+export async function loadSubstations(): Promise<{
+  substations: SubstationMeta[];
+  meta: SaveMeta;
+}> {
+  try {
+    const { content, meta } = await readText(SUBSTATIONS_PATH);
+    const parsed = JSON.parse(content) as SubstationsData;
+    return {
+      substations: Array.isArray(parsed.items) ? parsed.items : [],
+      meta,
+    };
+  } catch {
+    return { substations: [], meta: { source: "local", path: SUBSTATIONS_PATH } };
+  }
+}
+
+export async function saveSubstations(
+  substations: SubstationMeta[],
+  message = "Update substations.json via RMax CRM"
+): Promise<SaveMeta> {
+  const json =
+    JSON.stringify({ items: substations } satisfies SubstationsData, null, 2) + "\n";
+  if (hasGitHubToken()) {
+    return writeGitHubFile(SUBSTATIONS_PATH, json, message);
+  }
+  return writeLocal(SUBSTATIONS_PATH, json);
+}
+
+export async function loadTasks(): Promise<{ tasks: Task[]; meta: SaveMeta }> {
+  try {
+    const { content, meta } = await readText(TASKS_PATH);
+    const parsed = JSON.parse(content) as TasksData;
+    return { tasks: Array.isArray(parsed.items) ? parsed.items : [], meta };
+  } catch {
+    return { tasks: [], meta: { source: "local", path: TASKS_PATH } };
+  }
+}
+
+export async function saveTasks(
+  tasks: Task[],
+  message = "Update tasks.json via RMax CRM"
+): Promise<SaveMeta> {
+  const json = JSON.stringify({ items: tasks } satisfies TasksData, null, 2) + "\n";
+  if (hasGitHubToken()) {
+    return writeGitHubFile(TASKS_PATH, json, message);
+  }
+  return writeLocal(TASKS_PATH, json);
+}
+
+export async function loadPipeline(): Promise<{
+  items: PipelineSubstation[];
+  meta: SaveMeta;
+}> {
+  try {
+    const { content, meta } = await readText(PIPELINE_PATH);
+    const parsed = JSON.parse(content) as PipelineData;
+    return { items: Array.isArray(parsed.items) ? parsed.items : [], meta };
+  } catch {
+    return { items: [], meta: { source: "local", path: PIPELINE_PATH } };
+  }
+}
+
+export async function savePipeline(
+  items: PipelineSubstation[],
+  message = "Update substation-pipeline.json via RMax CRM"
+): Promise<SaveMeta> {
+  const json = JSON.stringify({ items } satisfies PipelineData, null, 2) + "\n";
+  if (hasGitHubToken()) {
+    return writeGitHubFile(PIPELINE_PATH, json, message);
+  }
+  return writeLocal(PIPELINE_PATH, json);
+}
+
+/**
+ * Concurrency-safe read-modify-write for a JSON file. On GitHub it reads the
+ * current file + sha, applies the mutation to the freshest data, and writes with
+ * that sha; if another write landed first (sha conflict), it re-reads and retries
+ * so simultaneous edits merge instead of clobbering each other.
+ */
+async function mutateJsonFile<T>(
+  rel: string,
+  empty: T,
+  mutate: (current: T) => T,
+  message: string
+): Promise<{ data: T; meta: SaveMeta }> {
+  if (hasGitHubToken()) {
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      let current: T = empty;
+      let sha: string | undefined;
+      try {
+        const r = await readGitHubFile(rel);
+        current = JSON.parse(r.content) as T;
+        sha = r.sha;
+      } catch {
+        current = empty;
+        sha = undefined;
+      }
+      const next = mutate(current);
+      try {
+        const meta = await writeGitHubFile(
+          rel,
+          JSON.stringify(next, null, 2) + "\n",
+          message,
+          sha
+        );
+        return { data: next, meta };
+      } catch (err) {
+        const status = (err as { status?: number })?.status;
+        if (status === 409 || status === 422) {
+          lastErr = err;
+          await new Promise((res) => setTimeout(res, 150 * (attempt + 1)));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error("Write conflict — please retry");
+  }
+
+  let current: T = empty;
+  try {
+    current = JSON.parse(await fs.readFile(localPath(rel), "utf-8")) as T;
+  } catch {
+    current = empty;
+  }
+  const next = mutate(current);
+  const meta = await writeLocal(rel, JSON.stringify(next, null, 2) + "\n");
+  return { data: next, meta };
+}
+
+export async function mutatePower(
+  mutate: (items: PowerAvailability[]) => PowerAvailability[],
+  message = "Update power.json via RMax CRM"
+): Promise<{ power: PowerAvailability[]; meta: SaveMeta }> {
+  const { data, meta } = await mutateJsonFile<PowerData>(
+    POWER_PATH,
+    { items: [] },
+    (cur) => ({ items: mutate(cur.items || []) }),
+    message
+  );
+  return { power: data.items, meta };
+}
+
+export async function mutateTasks(
+  mutate: (items: Task[]) => Task[],
+  message = "Update tasks.json via RMax CRM"
+): Promise<{ tasks: Task[]; meta: SaveMeta }> {
+  const { data, meta } = await mutateJsonFile<TasksData>(
+    TASKS_PATH,
+    { items: [] },
+    (cur) => ({ items: mutate(cur.items || []) }),
+    message
+  );
+  return { tasks: data.items, meta };
+}
+
+export async function mutatePipeline(
+  mutate: (items: PipelineSubstation[]) => PipelineSubstation[],
+  message = "Update substation-pipeline.json via RMax CRM"
+): Promise<{ items: PipelineSubstation[]; meta: SaveMeta }> {
+  const { data, meta } = await mutateJsonFile<PipelineData>(
+    PIPELINE_PATH,
+    { items: [] },
+    (cur) => ({ items: mutate(cur.items || []) }),
+    message
+  );
+  return { items: data.items, meta };
+}
+
+
+export async function loadDeals(): Promise<{ items: Deal[]; meta: SaveMeta }> {
+  try {
+    const { content, meta } = await readText(DEALS_PATH);
+    const parsed = JSON.parse(content) as DealsData;
+    return { items: Array.isArray(parsed.items) ? parsed.items : [], meta };
+  } catch {
+    return { items: [], meta: { source: "local", path: DEALS_PATH } };
+  }
+}
+
+export async function mutateDeals(
+  mutate: (items: Deal[]) => Deal[],
+  message = "Update deals.json via RMax CRM"
+): Promise<{ items: Deal[]; meta: SaveMeta }> {
+  const { data, meta } = await mutateJsonFile<DealsData>(
+    DEALS_PATH,
+    { items: [] },
+    (cur) => ({ items: mutate(cur.items || []) }),
+    message
+  );
+  return { items: data.items, meta };
 }

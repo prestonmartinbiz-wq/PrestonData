@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   ArrowDownUp,
   Download,
-  Phone,
   Plus,
   RefreshCw,
   Search,
@@ -28,10 +28,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LeadForm, EMPTY_LEAD } from "@/components/crm/lead-form";
-import { LogCallForm } from "@/components/crm/log-call-form";
 import { PropertyLinks } from "@/components/crm/property-links";
 import { isNeverCalled, isOverdueCallback, outcomeLabel } from "@/lib/calls";
-import type { CallRecord, Lead, SaveMeta, TeamMember } from "@/lib/types";
+import type { Lead, SaveMeta, TeamMember } from "@/lib/types";
 import { needsContact } from "@/lib/utils";
 
 type SortKey =
@@ -67,7 +66,6 @@ export function LeadsDashboard({
   initialMeta,
   team,
   currentUserEmail,
-  currentUserName,
 }: {
   initialLeads: Lead[];
   initialMeta: SaveMeta;
@@ -85,11 +83,9 @@ export function LeadsDashboard({
   const [myLeadsOnly, setMyLeadsOnly] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("apn");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [selected, setSelected] = useState<Lead | null>(null);
+  const router = useRouter();
   const [creating, setCreating] = useState(false);
-  const [loggingCall, setLoggingCall] = useState(false);
   const [draft, setDraft] = useState<Lead>(EMPTY_LEAD);
-  const [leadCalls, setLeadCalls] = useState<CallRecord[]>([]);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -200,30 +196,15 @@ export function LeadsDashboard({
     setMeta(data.meta);
   }
 
-  async function loadCallsForApn(apn: string) {
-    try {
-      const res = await fetch("/api/calls?apn=" + encodeURIComponent(apn));
-      if (!res.ok) return;
-      const data = await res.json();
-      setLeadCalls(data.calls || []);
-    } catch {
-      setLeadCalls([]);
-    }
+  function openLead(lead: Lead) {
+    router.push("/lead/" + encodeURIComponent(lead.apn));
   }
 
-  async function openLead(lead: Lead) {
-    setDraft(lead);
-    setSelected(lead);
-    setLoggingCall(false);
-    setLeadCalls([]);
-    await loadCallsForApn(lead.apn);
-  }
-
-  async function saveLead(mode: "create" | "edit") {
+  async function createLead() {
     setSaving(true);
     try {
       const res = await fetch("/api/leads", {
-        method: mode === "create" ? "POST" : "PUT",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lead: draft }),
       });
@@ -232,31 +213,9 @@ export function LeadsDashboard({
       setLeads(data.leads);
       setMeta(data.meta);
       setCreating(false);
-      setSelected(null);
-      toast.success(mode === "create" ? "Lead added" : "Lead saved");
+      toast.success("Lead added");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function deleteLead() {
-    if (!draft.apn) return;
-    if (!confirm("Delete lead " + draft.apn + "?")) return;
-    setSaving(true);
-    try {
-      const res = await fetch("/api/leads?apn=" + encodeURIComponent(draft.apn), {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Delete failed");
-      setLeads(data.leads);
-      setMeta(data.meta);
-      setSelected(null);
-      toast.success("Lead deleted");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Delete failed");
     } finally {
       setSaving(false);
     }
@@ -286,6 +245,7 @@ export function LeadsDashboard({
       "Phone",
       "Email",
       "Alt Phone",
+      "Phones",
       "Mailing / RA Address",
       "Confidence",
       "Sources",
@@ -312,6 +272,7 @@ export function LeadsDashboard({
           l.phone,
           l.email,
           l.altPhone,
+          l.phones || [l.phone, l.altPhone].filter(Boolean).join("|"),
           l.mailingAddress,
           l.confidence,
           l.sources,
@@ -585,101 +546,12 @@ export function LeadsDashboard({
             team={team}
             currentUserEmail={currentUserEmail}
             onChange={setDraft}
-            onSubmit={() => saveLead("create")}
+            onSubmit={createLead}
             saving={saving}
           />
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={Boolean(selected)}
-        onOpenChange={(o) => {
-          if (!o) {
-            setSelected(null);
-            setLoggingCall(false);
-            setLeadCalls([]);
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {loggingCall ? `Log call · ${draft.apn}` : `Edit lead ${draft.apn}`}
-            </DialogTitle>
-          </DialogHeader>
-
-          {!loggingCall ? (
-            <>
-              <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-3">
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setLoggingCall(true)}
-                >
-                  <Phone className="h-4 w-4" /> Log call
-                </Button>
-                <PropertyLinks
-                  apn={draft.apn}
-                  propertyAddress={draft.propertyAddress}
-                  lat={draft.latitude}
-                  lng={draft.longitude}
-                />
-                {draft.callCount ? (
-                  <span className="text-xs text-slate-500">
-                    {draft.callCount} call{draft.callCount === "1" ? "" : "s"}
-                    {draft.lastCalledAt
-                      ? ` · last ${formatShortDate(draft.lastCalledAt)}`
-                      : ""}
-                    {draft.nextCallbackAt
-                      ? ` · callback ${formatShortDate(draft.nextCallbackAt)}`
-                      : ""}
-                  </span>
-                ) : (
-                  <span className="text-xs text-slate-500">No calls yet</span>
-                )}
-              </div>
-              <LeadForm
-                mode="edit"
-                lead={draft}
-                team={team}
-                currentUserEmail={currentUserEmail}
-                onChange={setDraft}
-                onSubmit={() => saveLead("edit")}
-                onDelete={deleteLead}
-                saving={saving}
-              />
-            </>
-          ) : (
-            <LogCallForm
-              lead={draft}
-              currentUserEmail={currentUserEmail}
-              currentUserName={currentUserName}
-              recentCalls={leadCalls}
-              onCancel={() => setLoggingCall(false)}
-              onLogged={({ call, leads: nextLeads, calls }) => {
-                if (nextLeads?.length) {
-                  setLeads(nextLeads);
-                  const updated = nextLeads.find((l) => l.apn === draft.apn);
-                  if (updated) {
-                    setDraft(updated);
-                    setSelected(updated);
-                  }
-                }
-                setLeadCalls(
-                  [...calls]
-                    .filter((c) => c.apn === draft.apn)
-                    .sort(
-                      (a, b) =>
-                        (Date.parse(b.calledAt) || 0) - (Date.parse(a.calledAt) || 0)
-                    )
-                );
-                void call;
-                setLoggingCall(true);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
