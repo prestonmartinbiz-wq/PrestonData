@@ -11,6 +11,7 @@ import { ExternalLink, MapPin, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { cn, clarkAssessorUrl, clarkGismoUrl, normalizeApn } from "@/lib/utils";
+import { zoningExportUrl } from "@/lib/zoning";
 
 export type MapMarker = {
   id: string;
@@ -183,6 +184,49 @@ function ParcelsLayer({
   return null;
 }
 
+/** Zoning (all jurisdictions) as a semi-transparent image overlay for the view. */
+function ZoningOverlay({ enabled, opacity = 0.5 }: { enabled: boolean; opacity?: number }) {
+  const map = useMap();
+  const ovRef = useRef<google.maps.GroundOverlay | null>(null);
+
+  useEffect(() => {
+    if (!map) return;
+    const clear = () => {
+      if (ovRef.current) {
+        ovRef.current.setMap(null);
+        ovRef.current = null;
+      }
+    };
+    const load = () => {
+      clear();
+      if (!enabled) return;
+      const b = map.getBounds();
+      if (!b) return;
+      const ne = b.getNorthEast();
+      const sw = b.getSouthWest();
+      const div = map.getDiv() as HTMLElement | null;
+      const w = Math.min(2048, Math.max(256, div?.clientWidth || 1024));
+      const h = Math.min(2048, Math.max(256, div?.clientHeight || 768));
+      const url = zoningExportUrl(sw.lng(), sw.lat(), ne.lng(), ne.lat(), w, h);
+      const ov = new google.maps.GroundOverlay(
+        url,
+        { north: ne.lat(), south: sw.lat(), east: ne.lng(), west: sw.lng() },
+        { opacity, clickable: false }
+      );
+      ov.setMap(map);
+      ovRef.current = ov;
+    };
+    const idle = map.addListener("idle", load);
+    load();
+    return () => {
+      google.maps.event.removeListener(idle);
+      clear();
+    };
+  }, [map, enabled, opacity]);
+
+  return null;
+}
+
 function Toggle({
   on,
   onClick,
@@ -241,6 +285,7 @@ export function MarkersMap({
   const [showSubs, setShowSubs] = useState(true);
   const [onlyNoContact, setOnlyNoContact] = useState(false);
   const [showParcelLines, setShowParcelLines] = useState(false);
+  const [showZoning, setShowZoning] = useState(false);
   const [selected, setSelected] = useState<MapMarker | null>(null);
 
   // Parcel selection (from the Clark County boundaries layer)
@@ -248,6 +293,12 @@ export function MarkersMap({
   const [llc, setLlc] = useState("");
   const [expSub, setExpSub] = useState("");
   const [savingSite, setSavingSite] = useState(false);
+  const [zoning, setZoning] = useState<{
+    jurisdiction: string;
+    zone: string;
+    description: string;
+  } | null>(null);
+  const [zoningLoading, setZoningLoading] = useState(false);
 
   const trackedSet = useMemo(
     () => new Set(trackedApns.map((a) => normalizeApn(a))),
@@ -258,6 +309,13 @@ export function MarkersMap({
     setParcel(p);
     setLlc("");
     setExpSub("");
+    setZoning(null);
+    setZoningLoading(true);
+    fetch(`/api/zoning?point=${p.lng},${p.lat}`)
+      .then((r) => r.json())
+      .then((d) => setZoning(d.zoning || null))
+      .catch(() => setZoning(null))
+      .finally(() => setZoningLoading(false));
   }, []);
 
   async function addSite(input: {
@@ -404,6 +462,13 @@ export function MarkersMap({
         >
           Parcel lines
         </Toggle>
+        <Toggle
+          on={showZoning}
+          onClick={() => setShowZoning((v) => !v)}
+          color="#a855f7"
+        >
+          Zoning
+        </Toggle>
         {showParcelLines ? (
           <span className="text-xs text-slate-400">
             Zoom in, then click a parcel to add it as a site.
@@ -449,6 +514,7 @@ export function MarkersMap({
             streetViewControl={false}
             style={{ width: "100%", height: "100%" }}
           >
+            <ZoningOverlay enabled={showZoning} />
             <ParcelsLayer
               enabled={showParcelLines}
               trackedSet={trackedSet}
@@ -552,6 +618,28 @@ export function MarkersMap({
                       </span>
                     ) : null}
                   </p>
+
+                  <div className="rounded bg-slate-50 px-2 py-1 text-xs text-slate-600">
+                    {zoningLoading ? (
+                      "Looking up zoning…"
+                    ) : zoning ? (
+                      <>
+                        <div>
+                          Jurisdiction:{" "}
+                          <span className="font-medium text-slate-800">
+                            {zoning.jurisdiction}
+                          </span>
+                        </div>
+                        <div>
+                          Zoning:{" "}
+                          <span className="font-medium text-slate-800">{zoning.zone}</span>
+                          {zoning.description ? ` — ${zoning.description}` : ""}
+                        </div>
+                      </>
+                    ) : (
+                      "Zoning: — (not found)"
+                    )}
+                  </div>
 
                   <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
                     {parcel.tracked ? (
