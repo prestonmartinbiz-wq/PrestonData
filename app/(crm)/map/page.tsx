@@ -93,6 +93,26 @@ export default async function MapPage() {
   const mapped = parcelMarkers.length;
   const unmapped = leads.length - mapped;
 
+  // APNs we already track (leads + pipeline sites) so those parcels are shaded.
+  const trackedApns = Array.from(
+    new Set(
+      [
+        ...leads.map((l) => l.apn),
+        ...pipeline.filter((p) => p.kind === "site").map((p) => p.apn || ""),
+      ]
+        .map((a) => (a || "").replace(/[^0-9a-zA-Z]/g, "").toUpperCase())
+        .filter(Boolean)
+    )
+  );
+  const substationNames = Array.from(
+    new Set(
+      pipeline
+        .filter((p) => (p.kind ?? "substation") === "substation")
+        .map((p) => p.name.trim())
+        .filter(Boolean)
+    )
+  ).sort();
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
@@ -111,6 +131,8 @@ export default async function MapPage() {
         parcels={parcelMarkers}
         substations={substationMarkers}
         center={center}
+        trackedApns={trackedApns}
+        substationNames={substationNames}
       />
     </div>
   );

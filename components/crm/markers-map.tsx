@@ -5,10 +5,12 @@ import {
   InfoWindow,
   Map as GoogleMap,
   Marker,
+  useMap,
 } from "@vis.gl/react-google-maps";
-import { ExternalLink, MapPin } from "lucide-react";
-import { useMemo, useState } from "react";
-import { cn } from "@/lib/utils";
+import { ExternalLink, MapPin, Plus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { cn, clarkAssessorUrl, clarkGismoUrl, normalizeApn } from "@/lib/utils";
 
 export type MapMarker = {
   id: string;
@@ -80,6 +82,107 @@ function destack(markers: MapMarker[]): MapMarker[] {
   return out;
 }
 
+type SelectedParcel = {
+  apn: string;
+  lat: number;
+  lng: number;
+  acres: number | null;
+  tracked: boolean;
+};
+
+/**
+ * Renders Clark County parcel boundaries for the current viewport (zoom ≥ 16)
+ * as a clickable Google Maps Data layer. Tracked parcels (we already have a
+ * lead/site) are shaded green. Clicking a parcel selects it (APN + centroid).
+ */
+function ParcelsLayer({
+  enabled,
+  trackedSet,
+  onSelect,
+}: {
+  enabled: boolean;
+  trackedSet: Set<string>;
+  onSelect: (p: SelectedParcel) => void;
+}) {
+  const map = useMap();
+  const dataRef = useRef<google.maps.Data | null>(null);
+
+  useEffect(() => {
+    if (!map) return;
+    const data = new google.maps.Data();
+    dataRef.current = data;
+    data.setStyle((feature) => {
+      const apn = String(feature.getProperty("APN") || "");
+      const tracked = trackedSet.has(normalizeApn(apn));
+      return {
+        strokeColor: tracked ? "#059669" : "#1e293b",
+        strokeWeight: tracked ? 2 : 0.8,
+        strokeOpacity: 0.9,
+        fillColor: "#10b981",
+        fillOpacity: tracked ? 0.2 : 0.04,
+      };
+    });
+    data.setMap(map);
+    const click = data.addListener("click", (e: google.maps.Data.MouseEvent) => {
+      const apn = String(e.feature.getProperty("APN") || "").trim();
+      const acresRaw = e.feature.getProperty("CALC_ACRES");
+      const ll = e.latLng;
+      onSelect({
+        apn,
+        lat: ll ? ll.lat() : 0,
+        lng: ll ? ll.lng() : 0,
+        acres: typeof acresRaw === "number" ? acresRaw : null,
+        tracked: trackedSet.has(normalizeApn(apn)),
+      });
+    });
+    return () => {
+      google.maps.event.removeListener(click);
+      data.setMap(null);
+      dataRef.current = null;
+    };
+  }, [map, trackedSet, onSelect]);
+
+  useEffect(() => {
+    if (!map) return;
+    let cancelled = false;
+    const clear = () => {
+      const d = dataRef.current;
+      if (d) d.forEach((f) => d.remove(f));
+    };
+    const load = async () => {
+      const data = dataRef.current;
+      if (!data) return;
+      if (!enabled) return clear();
+      if ((map.getZoom() ?? 0) < 16) return clear();
+      const b = map.getBounds();
+      if (!b) return;
+      const ne = b.getNorthEast();
+      const sw = b.getSouthWest();
+      const bbox = `${sw.lng()},${sw.lat()},${ne.lng()},${ne.lat()}`;
+      try {
+        const res = await fetch(`/api/parcels?bbox=${encodeURIComponent(bbox)}`);
+        if (!res.ok || cancelled) return;
+        const gj = await res.json();
+        const d = dataRef.current;
+        if (!d || cancelled) return;
+        d.forEach((f) => d.remove(f));
+        if (gj && Array.isArray(gj.features)) d.addGeoJson(gj);
+      } catch {
+        /* transient county-service error — ignore */
+      }
+    };
+    const idle = map.addListener("idle", load);
+    load();
+    return () => {
+      cancelled = true;
+      google.maps.event.removeListener(idle);
+      clear();
+    };
+  }, [map, enabled]);
+
+  return null;
+}
+
 function Toggle({
   on,
   onClick,
@@ -123,17 +226,70 @@ export function MarkersMap({
   substations,
   center,
   height = 640,
+  trackedApns = [],
+  substationNames = [],
 }: {
   parcels: MapMarker[];
   substations: MapMarker[];
   center: { lat: number; lng: number };
   height?: number;
+  trackedApns?: string[];
+  substationNames?: string[];
 }) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
   const [showParcels, setShowParcels] = useState(true);
   const [showSubs, setShowSubs] = useState(true);
   const [onlyNoContact, setOnlyNoContact] = useState(false);
+  const [showParcelLines, setShowParcelLines] = useState(false);
   const [selected, setSelected] = useState<MapMarker | null>(null);
+
+  // Parcel selection (from the Clark County boundaries layer)
+  const [parcel, setParcel] = useState<SelectedParcel | null>(null);
+  const [llc, setLlc] = useState("");
+  const [expSub, setExpSub] = useState("");
+  const [savingSite, setSavingSite] = useState(false);
+
+  const trackedSet = useMemo(
+    () => new Set(trackedApns.map((a) => normalizeApn(a))),
+    [trackedApns]
+  );
+  const onSelectParcel = useCallback((p: SelectedParcel) => {
+    setSelected(null);
+    setParcel(p);
+    setLlc("");
+    setExpSub("");
+  }, []);
+
+  async function addSiteFromParcel() {
+    if (!parcel) return;
+    setSavingSite(true);
+    try {
+      const res = await fetch("/api/pipeline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "site",
+          apn: parcel.apn,
+          name: `APN ${parcel.apn}`,
+          address: "",
+          latitude: String(parcel.lat),
+          longitude: String(parcel.lng),
+          expectedSubstation: expSub.trim(),
+          notes: llc.trim() ? `Owner/LLC: ${llc.trim()}` : "",
+          justification: "Added from map",
+          priority: "Medium",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      toast.success("Added to Sites of Interest");
+      setParcel(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setSavingSite(false);
+    }
+  }
 
   const visible = useMemo(() => {
     const list: MapMarker[] = [];
@@ -205,6 +361,18 @@ export function MarkersMap({
         >
           Needs contact only
         </Toggle>
+        <Toggle
+          on={showParcelLines}
+          onClick={() => setShowParcelLines((v) => !v)}
+          color={COLORS.worked}
+        >
+          Parcel lines
+        </Toggle>
+        {showParcelLines ? (
+          <span className="text-xs text-slate-400">
+            Zoom in, then click a parcel to add it as a site.
+          </span>
+        ) : null}
         <div className="ml-auto flex items-center gap-3 text-xs text-slate-500">
           <span className="inline-flex items-center gap-1">
             <span
@@ -245,6 +413,11 @@ export function MarkersMap({
             streetViewControl={false}
             style={{ width: "100%", height: "100%" }}
           >
+            <ParcelsLayer
+              enabled={showParcelLines}
+              trackedSet={trackedSet}
+              onSelect={onSelectParcel}
+            />
             {visible.map((m) => (
               <Marker
                 key={`${m.kind}-${m.id}`}
@@ -301,9 +474,110 @@ export function MarkersMap({
                 </div>
               </InfoWindow>
             ) : null}
+
+            {parcel ? (
+              <InfoWindow
+                position={{ lat: parcel.lat, lng: parcel.lng }}
+                onCloseClick={() => setParcel(null)}
+                pixelOffset={[0, -4]}
+              >
+                <div className="w-[260px] space-y-2 p-1">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="inline-block h-2.5 w-2.5 rounded-sm"
+                      style={{ backgroundColor: COLORS.worked }}
+                    />
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Parcel
+                    </span>
+                    {parcel.tracked ? (
+                      <span className="rounded bg-emerald-50 px-1 text-[10px] font-medium text-emerald-700">
+                        In our system
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    APN {parcel.apn}
+                    {parcel.acres ? (
+                      <span className="font-normal text-slate-500">
+                        {" "}
+                        · {parcel.acres} ac
+                      </span>
+                    ) : null}
+                  </p>
+
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
+                    {parcel.tracked ? (
+                      <a
+                        href={`/lead/${encodeURIComponent(parcel.apn)}`}
+                        className="font-medium text-sky-700 hover:underline"
+                      >
+                        Open our record
+                      </a>
+                    ) : null}
+                    <a
+                      href={clarkGismoUrl(parcel.apn) || "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-0.5 text-slate-600 hover:underline"
+                    >
+                      GISMO (owner + deeds) <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <a
+                      href={clarkAssessorUrl(parcel.apn) || "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-0.5 text-slate-600 hover:underline"
+                    >
+                      Assessor <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <a
+                      href="https://recorderecomm.clarkcountynv.gov/AcclaimWeb/Search/SearchTypeParcel"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-0.5 text-slate-600 hover:underline"
+                    >
+                      Recorder deeds <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+
+                  {!parcel.tracked ? (
+                    <div className="space-y-1.5 border-t border-slate-100 pt-2">
+                      <input
+                        className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
+                        placeholder="Owner / LLC (optional)"
+                        value={llc}
+                        onChange={(e) => setLlc(e.target.value)}
+                      />
+                      <input
+                        className="w-full rounded border border-slate-200 px-2 py-1 text-xs"
+                        placeholder="Expected substation (optional)"
+                        list="map-sub-names"
+                        value={expSub}
+                        onChange={(e) => setExpSub(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        onClick={addSiteFromParcel}
+                        disabled={savingSite}
+                        className="inline-flex w-full items-center justify-center gap-1 rounded bg-slate-900 px-2 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        {savingSite ? "Adding…" : "Add to interest list"}
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              </InfoWindow>
+            ) : null}
           </GoogleMap>
         </APIProvider>
       </div>
+      <datalist id="map-sub-names">
+        {substationNames.map((n) => (
+          <option key={n} value={n} />
+        ))}
+      </datalist>
     </div>
   );
 }
