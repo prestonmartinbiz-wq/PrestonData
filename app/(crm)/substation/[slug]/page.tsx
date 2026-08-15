@@ -1,7 +1,14 @@
 import { notFound } from "next/navigation";
 import { SubstationDetail } from "@/components/crm/substation-detail";
 import { requireUser } from "@/lib/auth";
-import { loadLeads, loadPower, loadSubstations, loadTeam } from "@/lib/data-store";
+import {
+  loadLeads,
+  loadPipeline,
+  loadPower,
+  loadSubstations,
+  loadTeam,
+} from "@/lib/data-store";
+import { mergeBoardPower } from "@/lib/pipeline";
 import { buildSubstationBuckets, leadsForSlug } from "@/lib/substation";
 
 export const dynamic = "force-dynamic";
@@ -13,14 +20,20 @@ export default async function SubstationPage({
 }) {
   const user = await requireUser();
   const { slug } = await params;
-  const [{ leads }, { power }, { substations }, { team }] = await Promise.all([
-    loadLeads(),
-    loadPower(),
-    loadSubstations(),
-    loadTeam(),
-  ]);
+  const [{ leads }, { power }, { substations }, { team }, { items: pipeline }] =
+    await Promise.all([
+      loadLeads(),
+      loadPower(),
+      loadSubstations(),
+      loadTeam(),
+      loadPipeline(),
+    ]);
 
-  const buckets = buildSubstationBuckets(leads, power, substations);
+  const buckets = buildSubstationBuckets(
+    leads,
+    mergeBoardPower(power, pipeline),
+    substations
+  );
   const bucket = buckets.find((b) => b.slug === slug);
   if (!bucket) notFound();
 

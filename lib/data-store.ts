@@ -522,6 +522,7 @@ export async function mutatePipeline(
   return { items: data.items, meta };
 }
 
+
 export async function loadDeals(): Promise<{ items: Deal[]; meta: SaveMeta }> {
   try {
     const { content, meta } = await readText(DEALS_PATH);

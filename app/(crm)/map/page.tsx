@@ -1,6 +1,12 @@
 import { MarkersMap, type MapMarker } from "@/components/crm/markers-map";
 import { requireUser } from "@/lib/auth";
-import { loadLeads, loadPower, loadSubstations } from "@/lib/data-store";
+import {
+  loadLeads,
+  loadPipeline,
+  loadPower,
+  loadSubstations,
+} from "@/lib/data-store";
+import { mergeBoardPower } from "@/lib/pipeline";
 import {
   buildSubstationBuckets,
   isWorked,
@@ -22,11 +28,13 @@ function coord(lead: { latitude: string; longitude: string }) {
 
 export default async function MapPage() {
   await requireUser();
-  const [{ leads }, { power }, { substations }] = await Promise.all([
-    loadLeads(),
-    loadPower(),
-    loadSubstations(),
-  ]);
+  const [{ leads }, { power }, { substations }, { items: pipeline }] =
+    await Promise.all([
+      loadLeads(),
+      loadPower(),
+      loadSubstations(),
+      loadPipeline(),
+    ]);
 
   const parcelMarkers: MapMarker[] = [];
   for (const lead of leads) {
@@ -48,7 +56,11 @@ export default async function MapPage() {
     });
   }
 
-  const buckets = buildSubstationBuckets(leads, power, substations);
+  const buckets = buildSubstationBuckets(
+    leads,
+    mergeBoardPower(power, pipeline),
+    substations
+  );
   const substationMarkers: MapMarker[] = [];
   for (const bucket of buckets) {
     const coords = leadsForSlug(leads, bucket.slug, substations)

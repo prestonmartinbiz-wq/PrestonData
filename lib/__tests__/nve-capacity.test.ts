@@ -5,8 +5,19 @@ import {
   heavyScenarioValues,
   rejectedMwValues,
 } from "@/lib/nve-extract";
-import { applyResponse, mergeFeeders, rollupAvailableMw } from "@/lib/pipeline";
-import type { PipelineResponse, PipelineSubstation } from "@/lib/types";
+import {
+  applyResponse,
+  mergeBoardPower,
+  mergeFeeders,
+  pipelineToPowerRecords,
+  rollupAvailableMw,
+} from "@/lib/pipeline";
+import { buildSubstationBuckets } from "@/lib/substation";
+import type {
+  PipelineResponse,
+  PipelineSubstation,
+  PowerAvailability,
+} from "@/lib/types";
 
 // The "teaching" email: 5 MW is viable on-site (300 ft), 8 MW needs an extra
 // feeder + 1.2 miles of trenching (we don't want it). Power is from Tam, not
@@ -154,6 +165,105 @@ describe("applyResponse — capacity guardrails", () => {
     expect(rec.mwAvailable).toBe(20); // max(10,20), not 30
     // the shared feeder is counted once
     expect(rec.feeders.filter((f) => f.id === "HI-1228")).toHaveLength(1);
+  });
+});
+
+describe("pipeline → board propagation", () => {
+  test("a confirmed pipeline substation mirrors to a board power record", () => {
+    const sub = {
+      ...base(),
+      name: "Tam",
+      status: "confirmed" as const,
+      feeders: [{ id: "TA-1205", mva: 2 }, { id: "TA-1210", mva: 3 }],
+      mwAvailable: 5,
+      isdDate: "2027-07-01",
+    };
+    const recs = pipelineToPowerRecords([sub]);
+    expect(recs).toHaveLength(1);
+    expect(recs[0].substation).toBe("Tam");
+    expect(recs[0].sourcePipelineId).toBe(sub.id);
+    expect(recs[0].feeders.map((f) => f.id)).toEqual(["TA-1205", "TA-1210"]);
+  });
+
+  test("a substation of interest with no power is NOT mirrored", () => {
+    const sub = { ...base(), name: "Ford", status: "to_be_searched" as const, feeders: [], mwAvailable: null };
+    expect(pipelineToPowerRecords([sub])).toHaveLength(0);
+  });
+
+  test("a site attributes power to its expected substation", () => {
+    const site = {
+      ...base(),
+      kind: "site" as const,
+      name: "3325 W Sahara",
+      expectedSubstation: "Tam",
+      feeders: [{ id: "TA-1205", mva: 2 }],
+      mwAvailable: 5,
+    };
+    expect(pipelineToPowerRecords([site])[0].substation).toBe("Tam");
+  });
+
+  test("board reflects a pipeline-only substation via mergeBoardPower", () => {
+    const merged = mergeBoardPower(
+      [],
+      [
+        {
+          ...base(),
+          name: "Tam",
+          status: "confirmed",
+          feeders: [{ id: "TA-1205", mva: 2 }, { id: "TA-1210", mva: 3 }],
+          mwAvailable: 5,
+        },
+      ]
+    );
+    const bucket = buildSubstationBuckets([], merged, []).find((b) => b.name === "Tam")!;
+    expect(bucket.feederCount).toBe(2);
+    expect(bucket.totalMva).toBe(5);
+  });
+
+  test("mergeBoardPower folds pipeline feeders into an existing board record — no double count, no duplicate card", () => {
+    const seed: PowerAvailability = {
+      id: "seed-1",
+      substation: "Polaris",
+      apn: "",
+      address: "",
+      isd: "",
+      peakDemand: "",
+      feeders: [
+        { id: "POL-1201", mva: 5 },
+        { id: "POL-1205", mva: 8 },
+      ],
+      trenchingFt: null,
+      trenchingSegments: 0,
+      contactName: "",
+      contactEmail: "",
+      emailSubject: "",
+      emailDate: "",
+      sourceFile: "",
+      createdAt: "",
+    };
+    const merged = mergeBoardPower(
+      [seed],
+      [
+        {
+          ...base(),
+          name: "Polaris",
+          status: "confirmed",
+          // same two feeders (mva unknown in pipeline) + one new feeder
+          feeders: [
+            { id: "POL-1201", mva: null },
+            { id: "POL-1205", mva: null },
+            { id: "POL-1212", mva: 7 },
+          ],
+          mwAvailable: 20,
+        },
+      ]
+    );
+    // One consolidated record (no duplicate card), seed MVA preserved (max)
+    expect(merged).toHaveLength(1);
+    const bucket = buildSubstationBuckets([], merged, []).find((b) => b.name === "Polaris")!;
+    // 3 distinct feeders → 5 + 8 + 7 = 20, not double-counted
+    expect(bucket.feederCount).toBe(3);
+    expect(bucket.totalMva).toBe(20);
   });
 });
 

@@ -1,5 +1,54 @@
 import { monthsUntil, scoreSubstation } from "@/lib/scoring";
-import type { Feeder, PipelineResponse, PipelineSubstation } from "@/lib/types";
+import type {
+  Feeder,
+  PipelineResponse,
+  PipelineSubstation,
+  PowerAvailability,
+} from "@/lib/types";
+
+/**
+ * Map pipeline substations to the board's power records so a confirmed study in
+ * the pipeline shows up on the Coverage board. One record per pipeline item that
+ * has power data, keyed by `pl-<id>` and tagged with `sourcePipelineId`. Sites
+ * attribute their power to the substation they expect it from. Feeders are
+ * already deduped by id (see rollupFromResponses), so the board never
+ * double-counts capacity.
+ */
+export function pipelineToPowerRecords(
+  items: PipelineSubstation[]
+): PowerAvailability[] {
+  const out: PowerAvailability[] = [];
+  for (const sub of items || []) {
+    const hasPower =
+      (sub.feeders && sub.feeders.length > 0) || sub.mwAvailable != null;
+    if (!hasPower) continue;
+    const boardName = (
+      sub.kind === "site" ? sub.expectedSubstation || sub.name : sub.name
+    )?.trim();
+    if (!boardName) continue;
+    const responses = sub.responses || [];
+    const latest = responses[responses.length - 1];
+    out.push({
+      id: `pl-${sub.id}`,
+      sourcePipelineId: sub.id,
+      substation: boardName,
+      apn: sub.apn || "",
+      address: sub.address || "",
+      isd: sub.isdDate || "",
+      peakDemand: sub.peakDemand || "",
+      feeders: sub.feeders || [],
+      trenchingFt: sub.trenchingFt ?? null,
+      trenchingSegments: 0,
+      contactName: latest?.from || "",
+      contactEmail: "",
+      emailSubject: latest?.subject || "",
+      emailDate: latest?.date || "",
+      sourceFile: latest?.sourceFile || "",
+      createdAt: sub.updatedAt || sub.createdAt || new Date().toISOString(),
+    });
+  }
+  return out;
+}
 
 /** Recompute derived fields (long-lead flag + composite score for confirmed). */
 export function finalizePipeline(record: PipelineSubstation): PipelineSubstation {
@@ -89,6 +138,45 @@ export function rollupFromResponses(record: PipelineSubstation): PipelineSubstat
     images,
     nveResponseRaw: latest?.text || record.nveResponseRaw,
   };
+}
+
+/**
+ * Merge confirmed pipeline power into the board's power records at read time, so
+ * the Coverage board and substation detail always reflect the pipeline WITHOUT
+ * duplicating data in storage (the pipeline stays the single source of truth).
+ *
+ * For a substation that already has a board record, the pipeline's feeders are
+ * folded into it (deduped by id, max MVA) instead of adding a duplicate card —
+ * so capacity is never double-counted. Substations that exist only in the
+ * pipeline are added as their own record.
+ */
+export function mergeBoardPower(
+  boardPower: PowerAvailability[],
+  pipeline: PipelineSubstation[]
+): PowerAvailability[] {
+  const result: PowerAvailability[] = (boardPower || []).map((p) => ({
+    ...p,
+    feeders: [...(p.feeders || [])],
+  }));
+  const byName = new Map<string, PowerAvailability>();
+  for (const p of result) {
+    const key = (p.substation || "").trim().toLowerCase();
+    if (key && !byName.has(key)) byName.set(key, p);
+  }
+  for (const mirror of pipelineToPowerRecords(pipeline)) {
+    const key = mirror.substation.trim().toLowerCase();
+    const existing = byName.get(key);
+    if (existing) {
+      existing.feeders = mergeFeeders(existing.feeders, mirror.feeders);
+      if (!existing.isd) existing.isd = mirror.isd;
+      if (!existing.peakDemand) existing.peakDemand = mirror.peakDemand;
+      if (existing.trenchingFt == null) existing.trenchingFt = mirror.trenchingFt;
+    } else {
+      result.push(mirror);
+      byName.set(key, mirror);
+    }
+  }
+  return result;
 }
 
 /**

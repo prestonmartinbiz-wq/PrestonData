@@ -116,6 +116,12 @@ export type PowerAvailability = {
   sourceFile: string;
   /** ISO datetime this record was added. */
   createdAt: string;
+  /**
+   * When set, this board record is mirrored from a pipeline substation (id).
+   * These records are rebuilt from the pipeline on every change so the board
+   * always reflects confirmed studies; board-only records leave this empty.
+   */
+  sourcePipelineId?: string;
 };
 
 export type PowerData = {

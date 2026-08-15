@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { requireUser } from "@/lib/auth";
-import { loadPipeline, mutatePipeline, mutatePower } from "@/lib/data-store";
+import { loadPipeline, mutatePipeline } from "@/lib/data-store";
 import { parseEml } from "@/lib/eml";
-import { extractPowerFromText } from "@/lib/power";
 import { extractNve } from "@/lib/nve-extract";
 import { storePipelineImages } from "@/lib/image-store";
 import { applyResponse, finalizePipeline } from "@/lib/pipeline";
-import type {
-  PipelineResponse,
-  PipelineSubstation,
-  PowerAvailability,
-} from "@/lib/types";
+import type { PipelineResponse, PipelineSubstation } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -140,12 +135,6 @@ export async function POST(req: NextRequest) {
     }
 
     const nve = extractNve(emlText);
-    const parsedPower = extractPowerFromText(emlText, {
-      subject,
-      date,
-      from,
-      sourceFile,
-    });
 
     const response: PipelineResponse = {
       id: randomUUID(),
@@ -190,22 +179,11 @@ export async function POST(req: NextRequest) {
       return next;
     }, `Power availability request for ${targetName} (${who})`);
 
-    // Port over to the board's power data.
-    const powerRecord: PowerAvailability = {
-      ...parsedPower,
-      substation: targetName.trim(),
-      id: randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-    await mutatePower(
-      (list) => [powerRecord, ...list],
-      `Power availability for ${targetName} from request (${who})`
-    );
-
+    // The board reads pipeline power live (see mergeBoardPower), so no separate
+    // write is needed — the request is now reflected on the board immediately.
     return NextResponse.json({
       items,
       item: saved,
-      power: powerRecord,
       imagesSkipped,
     });
   } catch (err) {
