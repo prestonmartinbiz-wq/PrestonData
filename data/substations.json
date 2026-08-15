@@ -1,64 +1,112 @@
 {
   "items": [
     {
-      "name": "Highland",
-      "group": "Highland / El Rancho",
-      "location": "Serves 2635 Highland Dr, Las Vegas (near the Strip / I-15)",
-      "notes": "Grouped with El Rancho: the 2635 Highland Dr project is fed jointly by El Rancho (ER-1211) and Highland (HI-1228/HI-1128) feeders."
+      "name": "Alta",
+      "location": "Serves 740 MLK Blvd, Las Vegas",
+      "latitude": 36.178264,
+      "longitude": -115.160158,
+      "locatedBy": "parcel"
+    },
+    {
+      "name": "Brooks",
+      "location": "Serves 1011 E Alexander Rd, North Las Vegas — planned substation (ISD ~2031)",
+      "latitude": 36.218225,
+      "longitude": -115.17089,
+      "locatedBy": "parcel"
+    },
+    {
+      "name": "Commerce",
+      "location": "Serves 1201 S Casino Center Blvd, downtown Las Vegas",
+      "latitude": 36.157052,
+      "longitude": -115.151969,
+      "locatedBy": "parcel"
+    },
+    {
+      "name": "Craig",
+      "location": "Serves 4740 Losee Rd, North Las Vegas",
+      "latitude": 36.24581,
+      "longitude": -115.115637,
+      "locatedBy": "parcel"
     },
     {
       "name": "El Rancho",
       "group": "Highland / El Rancho",
       "aka": "El Rancho (ER-1211 feeder)",
-      "location": "Serves 2635 Highland Dr, Las Vegas (near the Strip / I-15)"
-    },
-    {
-      "name": "Polaris",
-      "location": "Serves 4424 Polaris Ave, Las Vegas (southeast valley)"
-    },
-    {
-      "name": "Procyon",
-      "location": "Serves Trop & Koval area, Las Vegas (southwest) — planned bus/bank"
-    },
-    {
-      "name": "Tonopah",
-      "location": "Serves 4150 Smoke Ranch Rd, Las Vegas (northwest)"
-    },
-    {
-      "name": "Commerce",
-      "location": "Serves 1201 S Casino Center Blvd, downtown Las Vegas"
-    },
-    {
-      "name": "Swenson",
-      "location": "Serves Convention Center Dr, Las Vegas (Paradise / LVCC)"
-    },
-    {
-      "name": "Larson",
-      "location": "Serves Volunteer & Gillespie, Henderson"
-    },
-    {
-      "name": "Lincoln",
-      "location": "Serves North Las Vegas (LM Construction sites) — planned bank"
-    },
-    {
-      "name": "Brooks",
-      "location": "Serves 1011 E Alexander Rd, North Las Vegas — planned substation (ISD ~2031)"
-    },
-    {
-      "name": "Craig",
-      "location": "Serves 4740 Losee Rd, North Las Vegas"
-    },
-    {
-      "name": "Gilmore",
-      "location": "Serves 1011 E Alexander Rd, North Las Vegas"
-    },
-    {
-      "name": "Alta",
-      "location": "Serves 740 MLK Blvd, Las Vegas"
+      "location": "Serves 2635 Highland Dr, Las Vegas (near the Strip / I-15)",
+      "latitude": 36.142904,
+      "longitude": -115.167507,
+      "locatedBy": "osm"
     },
     {
       "name": "Faulkner",
-      "location": "Serves central Las Vegas"
+      "location": "Serves central Las Vegas",
+      "latitude": 36.03542,
+      "longitude": -115.031189,
+      "locatedBy": "osm"
+    },
+    {
+      "name": "Gilmore",
+      "location": "Serves 1011 E Alexander Rd, North Las Vegas",
+      "latitude": 36.231722,
+      "longitude": -115.128486,
+      "locatedBy": "parcel"
+    },
+    {
+      "name": "Highland",
+      "group": "Highland / El Rancho",
+      "location": "Serves 2635 Highland Dr, Las Vegas (near the Strip / I-15)",
+      "notes": "Grouped with El Rancho: the 2635 Highland Dr project is fed jointly by El Rancho (ER-1211) and Highland (HI-1228/HI-1128) feeders.",
+      "latitude": 36.142904,
+      "longitude": -115.167507,
+      "locatedBy": "osm"
+    },
+    {
+      "name": "Larson",
+      "location": "Serves Volunteer & Gillespie, Henderson",
+      "latitude": 35.956743,
+      "longitude": -115.162294,
+      "locatedBy": "osm"
+    },
+    {
+      "name": "Lincoln",
+      "location": "Serves North Las Vegas (LM Construction sites) — planned bank",
+      "latitude": 36.181646,
+      "longitude": -115.061221,
+      "locatedBy": "parcel"
+    },
+    {
+      "name": "Polaris",
+      "location": "Serves 4424 Polaris Ave, Las Vegas (southeast valley)",
+      "latitude": 36.108735,
+      "longitude": -115.18495,
+      "locatedBy": "osm"
+    },
+    {
+      "name": "Procyon",
+      "location": "Serves Trop & Koval area, Las Vegas (southwest) — planned bus/bank",
+      "latitude": 36.103605,
+      "longitude": -115.162519,
+      "locatedBy": "parcel"
+    },
+    {
+      "name": "Sahara",
+      "latitude": 36.144073,
+      "longitude": -115.186492,
+      "locatedBy": "parcel"
+    },
+    {
+      "name": "Swenson",
+      "location": "Serves Convention Center Dr, Las Vegas (Paradise / LVCC)",
+      "latitude": 36.129432,
+      "longitude": -115.15297,
+      "locatedBy": "address"
+    },
+    {
+      "name": "Tonopah",
+      "location": "Serves 4150 Smoke Ranch Rd, Las Vegas (northwest)",
+      "latitude": 36.198444,
+      "longitude": -115.188471,
+      "locatedBy": "parcel"
     }
   ]
 }

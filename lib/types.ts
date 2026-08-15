@@ -144,6 +144,11 @@ export type SubstationMeta = {
   group?: string;
   /** Freeform note. */
   notes?: string;
+  /** Map coordinates for the substation, when known. */
+  latitude?: number;
+  longitude?: number;
+  /** How the coordinates were sourced: "osm" (exact), "parcel", or "address". */
+  locatedBy?: string;
 };
 
 export type SubstationsData = {

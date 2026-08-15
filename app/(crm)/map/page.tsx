@@ -61,23 +61,54 @@ export default async function MapPage() {
     mergeBoardPower(power, pipeline),
     substations
   );
+  // Explicit substation coordinates (OSM/APN/address) from substations.json.
+  const nk = (s: string) => (s || "").trim().toLowerCase();
+  const subCoord = new Map<string, { lat: number; lng: number; by: string }>();
+  for (const s of substations) {
+    const lat = Number(s.latitude);
+    const lng = Number(s.longitude);
+    if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
+      subCoord.set(nk(s.name), { lat, lng, by: s.locatedBy || "" });
+    }
+  }
+
   const substationMarkers: MapMarker[] = [];
   for (const bucket of buckets) {
-    const coords = leadsForSlug(leads, bucket.slug, substations)
-      .map(coord)
-      .filter((c): c is { lat: number; lng: number } => c !== null);
-    if (!coords.length) continue;
-    const lat = coords.reduce((s, c) => s + c.lat, 0) / coords.length;
-    const lng = coords.reduce((s, c) => s + c.lng, 0) / coords.length;
+    // Prefer an explicit substation location (bucket name or any grouped member),
+    // then fall back to the centroid of the substation's parcels.
+    let loc = subCoord.get(nk(bucket.name));
+    if (!loc) {
+      for (const m of bucket.members || []) {
+        const c = subCoord.get(nk(m));
+        if (c) {
+          loc = c;
+          break;
+        }
+      }
+    }
+    if (!loc) {
+      const coords = leadsForSlug(leads, bucket.slug, substations)
+        .map(coord)
+        .filter((c): c is { lat: number; lng: number } => c !== null);
+      if (coords.length) {
+        loc = {
+          lat: coords.reduce((s, c) => s + c.lat, 0) / coords.length,
+          lng: coords.reduce((s, c) => s + c.lng, 0) / coords.length,
+          by: "parcels",
+        };
+      }
+    }
+    if (!loc) continue;
+    const approx = loc.by && loc.by !== "osm";
     substationMarkers.push({
       id: bucket.slug,
-      lat,
-      lng,
+      lat: loc.lat,
+      lng: loc.lng,
       kind: "substation",
       title: bucket.name,
       subtitle: `${bucket.parcels} parcels · ${bucket.workedPct}% worked${
         bucket.totalMva ? ` · ${bucket.totalMva} MVA` : ""
-      }`,
+      }${approx ? " · approx location" : ""}`,
       href: `/substation/${bucket.slug}`,
     });
   }
