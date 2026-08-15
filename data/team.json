@@ -1,5 +1,12 @@
 {
   "members": [
-    { "name": "Preston", "email": "" }
+    {
+      "name": "Preston",
+      "email": ""
+    },
+    {
+      "name": "Jack",
+      "email": "laskyjg@gmail.com"
+    }
   ]
 }
