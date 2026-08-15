@@ -17,13 +17,13 @@
           "id": "45aadf6f-7d23-402d-9a97-3b2f25af0a30",
           "key": "agreement",
           "label": "Draft agreement / LOI",
-          "status": "needed",
-          "fileUrl": "",
-          "fileName": "",
+          "status": "received",
+          "fileUrl": "https://fzwtye8vohqhnc6g.public.blob.vercel-storage.com/deal-docs/559f9e52-54f0-43f3-aa27-418f703efd79/agreement-PSA_Harmon_Polaris_v2-Fv6kLcqIIrMZTO71etiv968BSujuB0.pdf",
+          "fileName": "PSA_Harmon_Polaris_v2.pdf",
           "link": "",
           "note": "",
-          "updatedAt": "2026-08-15T00:02:10.638Z",
-          "updatedBy": ""
+          "updatedAt": "2026-08-15T00:03:48.750Z",
+          "updatedBy": "demo@local.dev"
         },
         {
           "id": "a87c6b80-29b2-4102-9ac8-b2216d951b41",
@@ -138,7 +138,7 @@
       "diagrams": [],
       "createdBy": "demo@local.dev",
       "createdAt": "2026-08-15T00:02:10.635Z",
-      "updatedAt": "2026-08-15T00:02:10.635Z"
+      "updatedAt": "2026-08-15T00:03:48.750Z"
     },
     {
       "id": "b7d9c22c-1f92-44d8-8d3f-d1bb3664b445",
