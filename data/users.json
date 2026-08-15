@@ -1,0 +1,13 @@
+{
+  "users": [
+    {
+      "id": "d40ac366-a19e-41a2-8cc6-89e5a5876d5f",
+      "username": "preston",
+      "name": "Preston Martin",
+      "email": "preston@anywheredc.com",
+      "passwordHash": "d8e954f3686e711a7ebb69548fd173a1:bb9483976a3b8608572c2332762cedc92c5dab0b2628e360df56b51993fdd43c870b21fd8b9cc076ea0e19c39213fc267f049e0ae35d4af1b9a474b76ecc6356",
+      "role": "admin",
+      "createdAt": "2026-08-15T01:46:38.111Z"
+    }
+  ]
+}

@@ -413,6 +413,24 @@ export type TeamData = {
   members: TeamMember[];
 };
 
+/** A self-service login account (username + password) for a team member. */
+export type User = {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  /** scrypt hash as "salt:hash" (never sent to the client). */
+  passwordHash: string;
+  role: "admin" | "member";
+  createdAt: string;
+};
+
+export type PublicUser = Omit<User, "passwordHash">;
+
+export type UsersData = {
+  users: User[];
+};
+
 export type SaveMeta = {
   source: "github" | "local";
   path: string;

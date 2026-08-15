@@ -23,13 +23,27 @@ const nav = [
 export function AppShell({
   children,
   userEmail,
+  username,
+  account,
   clerkEnabled,
 }: {
   children: React.ReactNode;
   userEmail?: string;
+  username?: string;
+  account?: boolean;
   clerkEnabled: boolean;
 }) {
   const pathname = usePathname();
+
+  async function logout() {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      // Full navigation on purpose: clears the session and re-runs the gate.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.href = "/unlock";
+    }
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -69,12 +83,23 @@ export function AppShell({
             >
               Backup
             </a>
-            {userEmail ? <span className="hidden sm:inline">{userEmail}</span> : null}
-            {clerkEnabled ? (
+            {account ? (
+              <>
+                <span className="hidden sm:inline">
+                  {username ? `@${username}` : userEmail}
+                </span>
+                <button
+                  onClick={logout}
+                  className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                >
+                  Log out
+                </button>
+              </>
+            ) : clerkEnabled ? (
               <ClerkUserButton />
             ) : (
               <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-800">
-                Demo mode
+                Guest (passcode)
               </span>
             )}
           </div>

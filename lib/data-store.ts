@@ -23,6 +23,8 @@ import type {
   Task,
   TasksData,
   TeamData,
+  User,
+  UsersData,
 } from "@/lib/types";
 import { normalizeApn } from "@/lib/utils";
 
@@ -34,6 +36,7 @@ const SUBSTATIONS_PATH = "data/substations.json";
 const TASKS_PATH = "data/tasks.json";
 const PIPELINE_PATH = "data/substation-pipeline.json";
 const DEALS_PATH = "data/deals.json";
+const USERS_PATH = "data/users.json";
 
 function localPath(rel: string) {
   // Scope to data/ so Turbopack does not trace the whole project
@@ -544,4 +547,27 @@ export async function mutateDeals(
     message
   );
   return { items: data.items, meta };
+}
+
+export async function loadUsers(): Promise<{ users: User[]; meta: SaveMeta }> {
+  try {
+    const { content, meta } = await readText(USERS_PATH);
+    const parsed = JSON.parse(content) as UsersData;
+    return { users: Array.isArray(parsed.users) ? parsed.users : [], meta };
+  } catch {
+    return { users: [], meta: { source: "local", path: USERS_PATH } };
+  }
+}
+
+export async function mutateUsers(
+  mutate: (users: User[]) => User[],
+  message = "Update users.json via RMax CRM"
+): Promise<{ users: User[]; meta: SaveMeta }> {
+  const { data, meta } = await mutateJsonFile<UsersData>(
+    USERS_PATH,
+    { users: [] },
+    (cur) => ({ users: mutate(cur.users || []) }),
+    message
+  );
+  return { users: data.users, meta };
 }
