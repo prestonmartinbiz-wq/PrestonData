@@ -10,13 +10,13 @@
       "apn": "16209110037",
       "mwRequested": null,
       "expectedSubstation": "",
-      "status": "to_be_searched",
+      "status": "awaiting_nve_response",
       "submittedBy": "demo@local.dev",
       "dateAdded": "2026-08-16T18:56:23.031Z",
       "justification": "Added from map",
       "priority": "Medium",
-      "assignedEe": "",
-      "dateStudySubmittedToNve": "",
+      "assignedEe": "demo@local.dev",
+      "dateStudySubmittedToNve": "2026-08-16",
       "nveResponseRaw": "",
       "mwAvailable": null,
       "peakDemand": "",
@@ -31,7 +31,7 @@
       "responses": [],
       "images": [],
       "createdAt": "2026-08-16T18:56:23.031Z",
-      "updatedAt": "2026-08-16T18:56:23.032Z"
+      "updatedAt": "2026-08-16T18:57:07.747Z"
     },
     {
       "id": "27f8ff79-e40e-4091-b488-306ba82ce017",
