@@ -10,13 +10,13 @@
       "apn": "16209110033",
       "mwRequested": null,
       "expectedSubstation": "Highland",
-      "status": "to_be_searched",
+      "status": "awaiting_nve_response",
       "submittedBy": "demo@local.dev",
       "dateAdded": "2026-08-16T23:40:02.936Z",
       "justification": "Added from map",
       "priority": "Medium",
-      "assignedEe": "",
-      "dateStudySubmittedToNve": "",
+      "assignedEe": "demo@local.dev",
+      "dateStudySubmittedToNve": "2026-08-16",
       "nveResponseRaw": "",
       "mwAvailable": null,
       "peakDemand": "",
@@ -31,7 +31,7 @@
       "responses": [],
       "images": [],
       "createdAt": "2026-08-16T23:40:02.936Z",
-      "updatedAt": "2026-08-16T23:40:02.936Z"
+      "updatedAt": "2026-08-16T23:40:25.907Z"
     },
     {
       "id": "056ea317-06fd-4f4b-a14b-7a375d6ef5fe",
