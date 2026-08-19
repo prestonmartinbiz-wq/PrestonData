@@ -44,7 +44,7 @@ export function FarmsPageClient({
           <Users className="mx-auto mb-2 h-8 w-8 text-slate-400" />
           <p className="font-medium text-slate-700">No farms yet</p>
           <p className="mt-1">
-            Open the map, click <strong>Build a farm</strong>, draw a polygon, and save.
+            Open the map, tap the <strong>pen</strong>, label the farm, then draw its boundary.
           </p>
         </div>
       ) : null}
