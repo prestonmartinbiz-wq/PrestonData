@@ -18,6 +18,8 @@ import type {
   SaveMeta,
   SubstationMeta,
   SubstationsData,
+  Farm,
+  FarmsData,
   PipelineSubstation,
   PipelineData,
   Task,
@@ -34,6 +36,7 @@ const SUBSTATIONS_PATH = "data/substations.json";
 const TASKS_PATH = "data/tasks.json";
 const PIPELINE_PATH = "data/substation-pipeline.json";
 const DEALS_PATH = "data/deals.json";
+const FARMS_PATH = "data/farms.json";
 
 function localPath(rel: string) {
   // Scope to data/ so Turbopack does not trace the whole project
@@ -539,6 +542,29 @@ export async function mutateDeals(
 ): Promise<{ items: Deal[]; meta: SaveMeta }> {
   const { data, meta } = await mutateJsonFile<DealsData>(
     DEALS_PATH,
+    { items: [] },
+    (cur) => ({ items: mutate(cur.items || []) }),
+    message
+  );
+  return { items: data.items, meta };
+}
+
+export async function loadFarms(): Promise<{ items: Farm[]; meta: SaveMeta }> {
+  try {
+    const { content, meta } = await readText(FARMS_PATH);
+    const parsed = JSON.parse(content) as FarmsData;
+    return { items: Array.isArray(parsed.items) ? parsed.items : [], meta };
+  } catch {
+    return { items: [], meta: { source: "local", path: FARMS_PATH } };
+  }
+}
+
+export async function mutateFarms(
+  mutate: (items: Farm[]) => Farm[],
+  message = "Update farms.json via RMax CRM"
+): Promise<{ items: Farm[]; meta: SaveMeta }> {
+  const { data, meta } = await mutateJsonFile<FarmsData>(
+    FARMS_PATH,
     { items: [] },
     (cur) => ({ items: mutate(cur.items || []) }),
     message

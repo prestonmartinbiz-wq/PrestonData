@@ -15,6 +15,7 @@ const nav = [
   { href: "/pipeline", label: "Pipeline" },
   { href: "/deals", label: "Deals" },
   { href: "/map", label: "Map" },
+  { href: "/farms", label: "Farms" },
   { href: "/dashboard", label: "Leads" },
   { href: "/tasks", label: "Tasks" },
   { href: "/team", label: "Team" },
