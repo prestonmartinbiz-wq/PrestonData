@@ -7,10 +7,13 @@ import {
   Marker,
   useMap,
 } from "@vis.gl/react-google-maps";
-import { ExternalLink, MapPin, Plus } from "lucide-react";
+import { ExternalLink, MapPin, Pencil, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { FarmSaveDialog } from "@/components/crm/farm-save-dialog";
+import {
+  FarmSetupDialog,
+  type FarmDraftMeta,
+} from "@/components/crm/farm-setup-dialog";
 import type { Farm, FarmBoundary, TeamMember } from "@/lib/types";
 import { cn, clarkAssessorUrl, clarkGismoUrl, normalizeApn } from "@/lib/utils";
 
@@ -318,23 +321,59 @@ function FarmDrawingTool({
   return null;
 }
 
+/** Shows the in-progress or completed draft polygon before save. */
+function DraftFarmPolygon({ boundary }: { boundary: FarmBoundary | null }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || !boundary) return;
+    const ring = boundary.coordinates[0]?.map(([lng, lat]) => ({ lat, lng }));
+    if (!ring?.length) return;
+    const poly = new google.maps.Polygon({
+      paths: ring,
+      fillColor: "#e11d48",
+      fillOpacity: 0.22,
+      strokeColor: "#e11d48",
+      strokeWeight: 3,
+      map,
+      zIndex: 50,
+    });
+    return () => poly.setMap(null);
+  }, [map, boundary]);
+
+  return null;
+}
+
 function AddToFarmPicker({
   apn,
-  farms,
+  farms: initialFarms,
   onAdded,
 }: {
   apn: string;
   farms: Farm[];
   onAdded?: () => void;
 }) {
-  const [farmId, setFarmId] = useState(farms[0]?.id || "");
+  const [farms, setFarms] = useState(initialFarms);
+  const [farmId, setFarmId] = useState(initialFarms[0]?.id || "");
   const [adding, setAdding] = useState(false);
 
-  if (!farms.length) {
-    return (
-      <p className="text-[11px] text-slate-500">No farms yet — draw one on the map.</p>
-    );
-  }
+  useEffect(() => {
+    setFarms(initialFarms);
+    if (initialFarms.length) setFarmId(initialFarms[0].id);
+  }, [initialFarms]);
+
+  useEffect(() => {
+    if (!apn) return;
+    fetch("/api/farms")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data.items)) {
+          setFarms(data.items);
+          if (data.items.length) setFarmId(data.items[0].id);
+        }
+      })
+      .catch(() => undefined);
+  }, [apn]);
 
   async function add() {
     if (!farmId || !apn) return;
@@ -360,24 +399,35 @@ function AddToFarmPicker({
   }
 
   return (
-    <div className="flex gap-1 pt-1">
-      <select
-        className="min-w-0 flex-1 rounded border border-slate-200 px-1 py-1 text-xs"
-        value={farmId}
-        onChange={(e) => setFarmId(e.target.value)}
-      >
-        {farms.map((f) => (
-          <option key={f.id} value={f.id}>{f.name}</option>
-        ))}
-      </select>
-      <button
-        type="button"
-        onClick={add}
-        disabled={adding}
-        className="rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 disabled:opacity-60"
-      >
-        {adding ? "…" : "Add to farm"}
-      </button>
+    <div className="space-y-1.5 border-t border-slate-100 pt-2">
+      <span className="text-[11px] font-semibold text-slate-700">Add to farm</span>
+      {farms.length === 0 ? (
+        <p className="text-[11px] text-slate-500">
+          No farms yet — tap the pen on the map to create one.
+        </p>
+      ) : (
+        <>
+          <select
+            className="w-full rounded border border-slate-200 px-2 py-1.5 text-xs"
+            value={farmId}
+            onChange={(e) => setFarmId(e.target.value)}
+          >
+            {farms.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name} ({f.assignedTo})
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={add}
+            disabled={adding}
+            className="inline-flex w-full items-center justify-center rounded border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-60"
+          >
+            {adding ? "Adding…" : "Add to farm"}
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -453,9 +503,13 @@ export function MarkersMap({
   const [onlyNoContact, setOnlyNoContact] = useState(false);
   const [showParcelLines, setShowParcelLines] = useState(false);
   const [showFarms, setShowFarms] = useState(showFarmLayerDefault || readOnlyMap);
-  const [drawingFarm, setDrawingFarm] = useState(false);
-  const [farmDialogOpen, setFarmDialogOpen] = useState(false);
+  const [farmWizardStep, setFarmWizardStep] = useState<"idle" | "drawing" | "review">(
+    "idle"
+  );
+  const [farmSetupOpen, setFarmSetupOpen] = useState(false);
+  const [farmDraftMeta, setFarmDraftMeta] = useState<FarmDraftMeta | null>(null);
   const [pendingBoundary, setPendingBoundary] = useState<FarmBoundary | null>(null);
+  const [savingFarm, setSavingFarm] = useState(false);
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
   const [localFarms, setLocalFarms] = useState<Farm[]>(farms);
   const [selected, setSelected] = useState<MapMarker | null>(null);
@@ -479,10 +533,68 @@ export function MarkersMap({
   }, []);
 
   const onFarmBoundaryComplete = useCallback((boundary: FarmBoundary) => {
-    setDrawingFarm(false);
     setPendingBoundary(boundary);
-    setFarmDialogOpen(true);
+    setFarmWizardStep("review");
   }, []);
+
+  const cancelFarmWizard = useCallback(() => {
+    setFarmWizardStep("idle");
+    setFarmDraftMeta(null);
+    setPendingBoundary(null);
+    setFarmSetupOpen(false);
+  }, []);
+
+  const discardFarmDrawing = useCallback(() => {
+    setPendingBoundary(null);
+    setFarmWizardStep("drawing");
+  }, []);
+
+  const refreshLocalFarms = useCallback(() => {
+    fetch("/api/farms")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data.items)) setLocalFarms(data.items);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  async function saveFarm() {
+    if (!farmDraftMeta || !pendingBoundary) return;
+    setSavingFarm(true);
+    try {
+      const res = await fetch("/api/farms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: farmDraftMeta.name,
+          assignedTo: farmDraftMeta.assignedTo,
+          substationOfInterest: farmDraftMeta.substationOfInterest,
+          boundary: pendingBoundary,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save farm");
+      toast.success(
+        `Farm saved with ${data.farm?.members?.length ?? 0} parcel(s)`
+      );
+      cancelFarmWizard();
+      refreshLocalFarms();
+      if (data.farm?.id) {
+        window.location.href = `/farms/${encodeURIComponent(data.farm.id)}`;
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save farm");
+    } finally {
+      setSavingFarm(false);
+    }
+  }
+
+  function startFarmDrawing(meta: FarmDraftMeta) {
+    setFarmDraftMeta(meta);
+    setFarmWizardStep("drawing");
+    setShowFarms(true);
+    setPendingBoundary(null);
+  }
 
   const onSelectFarm = useCallback((farm: Farm) => {
     setSelected(null);
@@ -639,34 +751,23 @@ export function MarkersMap({
           Parcel lines
         </Toggle>
         {!readOnlyMap ? (
-          <>
-            <Toggle
-              on={showFarms}
-              onClick={() => setShowFarms((v) => !v)}
-              color="#e11d48"
-              count={localFarms.length}
-            >
-              Farms
-            </Toggle>
-            <Toggle
-              on={drawingFarm}
-              onClick={() => {
-                setDrawingFarm((v) => !v);
-                if (drawingFarm) setPendingBoundary(null);
-              }}
-              color="#e11d48"
-            >
-              Build a farm
-            </Toggle>
-          </>
+          <Toggle
+            on={showFarms}
+            onClick={() => setShowFarms((v) => !v)}
+            color="#e11d48"
+            count={localFarms.length}
+          >
+            Farms
+          </Toggle>
         ) : null}
-        {drawingFarm ? (
+        {farmWizardStep === "drawing" ? (
           <span className="text-xs text-rose-600">
-            Click to place vertices · double-click or click first point to close
+            Drawing <strong>{farmDraftMeta?.name}</strong> — click vertices,
+            double-click or click first point to close
           </span>
         ) : showParcelLines ? (
           <span className="text-xs text-slate-400">
-            Zoom in, then click a parcel to add it as a site.
+            Zoom in, then click a parcel to add it to a farm or interest list.
           </span>
         ) : null}
         <div className="ml-auto flex items-center gap-3 text-xs text-slate-500">
@@ -695,9 +796,64 @@ export function MarkersMap({
       </div>
 
       <div
-        className="overflow-hidden rounded-xl border border-slate-200"
+        className="relative overflow-hidden rounded-xl border border-slate-200"
         style={{ height }}
       >
+        {!readOnlyMap ? (
+          <button
+            type="button"
+            onClick={() => {
+              if (farmWizardStep === "idle") setFarmSetupOpen(true);
+            }}
+            disabled={farmWizardStep !== "idle"}
+            className={cn(
+              "absolute top-3 right-3 z-20 flex h-11 w-11 items-center justify-center rounded-lg border shadow-md transition",
+              farmWizardStep !== "idle"
+                ? "border-rose-300 bg-rose-50 text-rose-700"
+                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+            )}
+            title="Draw a new farm territory"
+          >
+            <Pencil className="h-5 w-5" />
+          </button>
+        ) : null}
+        {farmWizardStep === "review" && farmDraftMeta && pendingBoundary ? (
+          <div className="absolute bottom-3 left-3 right-3 z-20 rounded-lg border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur-sm">
+            <p className="text-sm font-semibold text-slate-900">
+              {farmDraftMeta.name}
+            </p>
+            <p className="text-xs text-slate-500">
+              {farmDraftMeta.substationOfInterest || "No substation"} ·{" "}
+              {farmDraftMeta.assignedTo}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={saveFarm}
+                disabled={savingFarm}
+                className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+              >
+                {savingFarm ? "Saving…" : "Save farm"}
+              </button>
+              <button
+                type="button"
+                onClick={discardFarmDrawing}
+                disabled={savingFarm}
+                className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              >
+                Discard drawing
+              </button>
+              <button
+                type="button"
+                onClick={cancelFarmWizard}
+                disabled={savingFarm}
+                className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
         <APIProvider apiKey={apiKey}>
           <GoogleMap
             defaultCenter={center}
@@ -710,7 +866,9 @@ export function MarkersMap({
             style={{ width: "100%", height: "100%" }}
           >
             <ParcelsLayer
-              enabled={showParcelLines && !drawingFarm}
+              enabled={
+                showParcelLines && farmWizardStep === "idle"
+              }
               trackedSet={trackedSet}
               onSelect={onSelectParcel}
             />
@@ -720,9 +878,14 @@ export function MarkersMap({
               highlightFarmId={highlightFarmId}
               onSelect={onSelectFarm}
             />
+            <DraftFarmPolygon
+              boundary={
+                farmWizardStep === "review" ? pendingBoundary : null
+              }
+            />
             {!readOnlyMap ? (
               <FarmDrawingTool
-                active={drawingFarm}
+                active={farmWizardStep === "drawing"}
                 onComplete={onFarmBoundaryComplete}
               />
             ) : null}
@@ -944,29 +1107,13 @@ export function MarkersMap({
         </APIProvider>
       </div>
       {!readOnlyMap ? (
-        <FarmSaveDialog
-          open={farmDialogOpen}
-          onOpenChange={setFarmDialogOpen}
-          boundary={pendingBoundary}
+        <FarmSetupDialog
+          open={farmSetupOpen}
+          onOpenChange={setFarmSetupOpen}
           teamMembers={teamMembers}
           substationNames={substationNames}
-          suggestedName={
-            expSub
-              ? `${expSub} — ${teamMembers[0]?.name || "Farm"}'s farm`
-              : undefined
-          }
-          onSaved={(farmId) => {
-            setPendingBoundary(null);
-            fetch("/api/farms")
-              .then((r) => r.json())
-              .then((data) => {
-                if (Array.isArray(data.items)) setLocalFarms(data.items);
-              })
-              .catch(() => undefined);
-            if (farmId) {
-              window.location.href = `/farms/${encodeURIComponent(farmId)}`;
-            }
-          }}
+          initialValues={farmDraftMeta}
+          onStartDrawing={startFarmDrawing}
         />
       ) : null}
       <datalist id="map-sub-names">
