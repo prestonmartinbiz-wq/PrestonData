@@ -1,10 +1,12 @@
 import { MarkersMap, type MapMarker } from "@/components/crm/markers-map";
 import { requireUser } from "@/lib/auth";
 import {
+  loadFarms,
   loadLeads,
   loadPipeline,
   loadPower,
   loadSubstations,
+  loadTeam,
 } from "@/lib/data-store";
 import { mergeBoardPower } from "@/lib/pipeline";
 import {
@@ -28,12 +30,14 @@ function coord(lead: { latitude: string; longitude: string }) {
 
 export default async function MapPage() {
   await requireUser();
-  const [{ leads }, { power }, { substations }, { items: pipeline }] =
+  const [{ leads }, { power }, { substations }, { items: pipeline }, { items: farms }, { team }] =
     await Promise.all([
       loadLeads(),
       loadPower(),
       loadSubstations(),
       loadPipeline(),
+      loadFarms(),
+      loadTeam(),
     ]);
 
   const parcelMarkers: MapMarker[] = [];
@@ -133,6 +137,8 @@ export default async function MapPage() {
         center={center}
         trackedApns={trackedApns}
         substationNames={substationNames}
+        farms={farms}
+        teamMembers={team.members}
       />
     </div>
   );

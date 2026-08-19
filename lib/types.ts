@@ -413,6 +413,37 @@ export type TeamData = {
   members: TeamMember[];
 };
 
+export type FarmMember = {
+  apn: string;
+  /** "polygon" = captured by drawn boundary; "manual" = added via Add to Farm */
+  addedVia: "polygon" | "manual";
+  addedAt: string;
+};
+
+export type FarmBoundary = {
+  type: "Polygon";
+  /** GeoJSON polygon ring(s) in WGS84 [lng, lat] */
+  coordinates: number[][][];
+};
+
+export type Farm = {
+  id: string;
+  name: string;
+  assignedTo: string;
+  substationOfInterest: string;
+  notes: string;
+  color: string;
+  boundary: FarmBoundary;
+  members: FarmMember[];
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FarmsData = {
+  items: Farm[];
+};
+
 export type SaveMeta = {
   source: "github" | "local";
   path: string;

@@ -10,6 +10,8 @@ import {
 import { ExternalLink, MapPin, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { FarmSaveDialog } from "@/components/crm/farm-save-dialog";
+import type { Farm, FarmBoundary, TeamMember } from "@/lib/types";
 import { cn, clarkAssessorUrl, clarkGismoUrl, normalizeApn } from "@/lib/utils";
 
 export type MapMarker = {
@@ -183,6 +185,203 @@ function ParcelsLayer({
   return null;
 }
 
+function FarmsLayer({
+  farms,
+  enabled,
+  highlightFarmId,
+  onSelect,
+}: {
+  farms: Farm[];
+  enabled: boolean;
+  highlightFarmId?: string;
+  onSelect: (farm: Farm) => void;
+}) {
+  const map = useMap();
+  const polygonsRef = useRef<google.maps.Polygon[]>([]);
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+
+  useEffect(() => {
+    if (!map) return;
+    polygonsRef.current.forEach((p) => p.setMap(null));
+    polygonsRef.current = [];
+
+    if (!enabled || !farms.length) return;
+
+    for (const farm of farms) {
+      const ring = farm.boundary.coordinates[0]?.map(([lng, lat]) => ({ lat, lng }));
+      if (!ring?.length) continue;
+      const highlighted = farm.id === highlightFarmId;
+      const poly = new google.maps.Polygon({
+        paths: ring,
+        fillColor: farm.color,
+        fillOpacity: highlighted ? 0.25 : 0.12,
+        strokeColor: farm.color,
+        strokeWeight: highlighted ? 3 : 2,
+        map,
+        zIndex: highlighted ? 2 : 1,
+      });
+      poly.addListener("click", () => onSelectRef.current(farm));
+      polygonsRef.current.push(poly);
+    }
+
+    return () => {
+      polygonsRef.current.forEach((p) => p.setMap(null));
+      polygonsRef.current = [];
+    };
+  }, [map, farms, enabled, highlightFarmId]);
+
+  return null;
+}
+
+function FarmDrawingTool({
+  active,
+  onComplete,
+}: {
+  active: boolean;
+  onComplete: (boundary: FarmBoundary) => void;
+}) {
+  const map = useMap();
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+  const verticesRef = useRef<{ lat: number; lng: number }[]>([]);
+  const previewRef = useRef<google.maps.Polygon | null>(null);
+
+  useEffect(() => {
+    if (!map || !active) return;
+
+    verticesRef.current = [];
+
+    function cleanupPreview() {
+      if (previewRef.current) {
+        previewRef.current.setMap(null);
+        previewRef.current = null;
+      }
+      verticesRef.current = [];
+    }
+
+    function finishPolygon() {
+      const verts = verticesRef.current;
+      if (verts.length < 3) return;
+      const ring: [number, number][] = verts.map((v) => [v.lng, v.lat]);
+      ring.push([ring[0][0], ring[0][1]]);
+      cleanupPreview();
+      onCompleteRef.current({ type: "Polygon", coordinates: [ring] });
+    }
+
+    function updatePreview() {
+      const verts = verticesRef.current;
+      if (previewRef.current) previewRef.current.setMap(null);
+      if (verts.length >= 2) {
+        previewRef.current = new google.maps.Polygon({
+          paths: verts,
+          fillColor: "#e11d48",
+          fillOpacity: 0.15,
+          strokeColor: "#e11d48",
+          strokeWeight: 2,
+          map,
+        });
+      }
+    }
+
+    const clickListener = map.addListener("click", (e: google.maps.MapMouseEvent) => {
+      const latLng = e.latLng;
+      if (!latLng) return;
+      const verts = verticesRef.current;
+
+      if (verts.length >= 3) {
+        const first = verts[0];
+        const dLat = latLng.lat() - first.lat;
+        const dLng = latLng.lng() - first.lng;
+        if (Math.hypot(dLat, dLng) < 0.00012) {
+          finishPolygon();
+          return;
+        }
+      }
+
+      verts.push({ lat: latLng.lat(), lng: latLng.lng() });
+      updatePreview();
+    });
+
+    const dblClickListener = map.addListener("dblclick", (e: google.maps.MapMouseEvent) => {
+      e.stop();
+      finishPolygon();
+    });
+
+    return () => {
+      google.maps.event.removeListener(clickListener);
+      google.maps.event.removeListener(dblClickListener);
+      cleanupPreview();
+    };
+  }, [map, active]);
+
+  return null;
+}
+
+function AddToFarmPicker({
+  apn,
+  farms,
+  onAdded,
+}: {
+  apn: string;
+  farms: Farm[];
+  onAdded?: () => void;
+}) {
+  const [farmId, setFarmId] = useState(farms[0]?.id || "");
+  const [adding, setAdding] = useState(false);
+
+  if (!farms.length) {
+    return (
+      <p className="text-[11px] text-slate-500">No farms yet — draw one on the map.</p>
+    );
+  }
+
+  async function add() {
+    if (!farmId || !apn) return;
+    setAdding(true);
+    try {
+      const res = await fetch(
+        `/api/farms/${encodeURIComponent(farmId)}/members`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ apn }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      toast.success("Added to farm");
+      onAdded?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  return (
+    <div className="flex gap-1 pt-1">
+      <select
+        className="min-w-0 flex-1 rounded border border-slate-200 px-1 py-1 text-xs"
+        value={farmId}
+        onChange={(e) => setFarmId(e.target.value)}
+      >
+        {farms.map((f) => (
+          <option key={f.id} value={f.id}>{f.name}</option>
+        ))}
+      </select>
+      <button
+        type="button"
+        onClick={add}
+        disabled={adding}
+        className="rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 disabled:opacity-60"
+      >
+        {adding ? "…" : "Add to farm"}
+      </button>
+    </div>
+  );
+}
+
 function Toggle({
   on,
   onClick,
@@ -228,6 +427,11 @@ export function MarkersMap({
   height = 640,
   trackedApns = [],
   substationNames = [],
+  farms = [],
+  teamMembers = [],
+  showFarmLayer: showFarmLayerDefault = false,
+  readOnlyMap = false,
+  highlightFarmId,
 }: {
   parcels: MapMarker[];
   substations: MapMarker[];
@@ -235,12 +439,25 @@ export function MarkersMap({
   height?: number;
   trackedApns?: string[];
   substationNames?: string[];
+  farms?: Farm[];
+  teamMembers?: TeamMember[];
+  /** When true, farm boundaries are visible by default */
+  showFarmLayer?: boolean;
+  /** Hide drawing controls (farm detail preview) */
+  readOnlyMap?: boolean;
+  highlightFarmId?: string;
 }) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
   const [showParcels, setShowParcels] = useState(true);
   const [showSubs, setShowSubs] = useState(true);
   const [onlyNoContact, setOnlyNoContact] = useState(false);
   const [showParcelLines, setShowParcelLines] = useState(false);
+  const [showFarms, setShowFarms] = useState(showFarmLayerDefault || readOnlyMap);
+  const [drawingFarm, setDrawingFarm] = useState(false);
+  const [farmDialogOpen, setFarmDialogOpen] = useState(false);
+  const [pendingBoundary, setPendingBoundary] = useState<FarmBoundary | null>(null);
+  const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
+  const [localFarms, setLocalFarms] = useState<Farm[]>(farms);
   const [selected, setSelected] = useState<MapMarker | null>(null);
 
   // Parcel selection (from the Clark County boundaries layer)
@@ -255,10 +472,27 @@ export function MarkersMap({
   );
   const onSelectParcel = useCallback((p: SelectedParcel) => {
     setSelected(null);
+    setSelectedFarm(null);
     setParcel(p);
     setLlc("");
     setExpSub("");
   }, []);
+
+  const onFarmBoundaryComplete = useCallback((boundary: FarmBoundary) => {
+    setDrawingFarm(false);
+    setPendingBoundary(boundary);
+    setFarmDialogOpen(true);
+  }, []);
+
+  const onSelectFarm = useCallback((farm: Farm) => {
+    setSelected(null);
+    setParcel(null);
+    setSelectedFarm(farm);
+  }, []);
+
+  useEffect(() => {
+    setLocalFarms(farms);
+  }, [farms]);
 
   async function addSite(input: {
     apn: string;
@@ -404,7 +638,33 @@ export function MarkersMap({
         >
           Parcel lines
         </Toggle>
-        {showParcelLines ? (
+        {!readOnlyMap ? (
+          <>
+            <Toggle
+              on={showFarms}
+              onClick={() => setShowFarms((v) => !v)}
+              color="#e11d48"
+              count={localFarms.length}
+            >
+              Farms
+            </Toggle>
+            <Toggle
+              on={drawingFarm}
+              onClick={() => {
+                setDrawingFarm((v) => !v);
+                if (drawingFarm) setPendingBoundary(null);
+              }}
+              color="#e11d48"
+            >
+              Build a farm
+            </Toggle>
+          </>
+        ) : null}
+        {drawingFarm ? (
+          <span className="text-xs text-rose-600">
+            Click to place vertices · double-click or click first point to close
+          </span>
+        ) : showParcelLines ? (
           <span className="text-xs text-slate-400">
             Zoom in, then click a parcel to add it as a site.
           </span>
@@ -450,10 +710,22 @@ export function MarkersMap({
             style={{ width: "100%", height: "100%" }}
           >
             <ParcelsLayer
-              enabled={showParcelLines}
+              enabled={showParcelLines && !drawingFarm}
               trackedSet={trackedSet}
               onSelect={onSelectParcel}
             />
+            <FarmsLayer
+              farms={localFarms}
+              enabled={showFarms || readOnlyMap}
+              highlightFarmId={highlightFarmId}
+              onSelect={onSelectFarm}
+            />
+            {!readOnlyMap ? (
+              <FarmDrawingTool
+                active={drawingFarm}
+                onComplete={onFarmBoundaryComplete}
+              />
+            ) : null}
             {visible.map((m) => (
               <Marker
                 key={`${m.kind}-${m.id}`}
@@ -508,15 +780,18 @@ export function MarkersMap({
                     </a>
                   ) : null}
                   {selected.kind === "parcel" ? (
-                    <button
-                      type="button"
-                      onClick={() => addSiteFromMarker(selected)}
-                      disabled={savingSite}
-                      className="mt-1 inline-flex w-full items-center justify-center gap-1 rounded bg-slate-900 px-2 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      {savingSite ? "Adding…" : "Add to interest list"}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => addSiteFromMarker(selected)}
+                        disabled={savingSite}
+                        className="mt-1 inline-flex w-full items-center justify-center gap-1 rounded bg-slate-900 px-2 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        {savingSite ? "Adding…" : "Add to interest list"}
+                      </button>
+                      <AddToFarmPicker apn={selected.id} farms={localFarms} />
+                    </>
                   ) : null}
                 </div>
               </InfoWindow>
@@ -616,13 +891,84 @@ export function MarkersMap({
                       <Plus className="h-3.5 w-3.5" />
                       {savingSite ? "Adding…" : "Add to interest list"}
                     </button>
+                    <AddToFarmPicker
+                      apn={parcel.apn}
+                      farms={localFarms}
+                    />
                   </div>
+                </div>
+              </InfoWindow>
+            ) : null}
+
+            {selectedFarm ? (
+              <InfoWindow
+                position={{
+                  lat: selectedFarm.boundary.coordinates[0][0][1],
+                  lng: selectedFarm.boundary.coordinates[0][0][0],
+                }}
+                onCloseClick={() => setSelectedFarm(null)}
+                pixelOffset={[0, -4]}
+              >
+                <div className="max-w-[240px] space-y-1 p-1">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="inline-block h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: selectedFarm.color }}
+                    />
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Farm
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {selectedFarm.name}
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    {selectedFarm.assignedTo} · {selectedFarm.members.length} parcel
+                    {selectedFarm.members.length === 1 ? "" : "s"}
+                  </p>
+                  {selectedFarm.substationOfInterest ? (
+                    <p className="text-xs text-slate-500">
+                      {selectedFarm.substationOfInterest}
+                    </p>
+                  ) : null}
+                  <a
+                    href={`/farms/${encodeURIComponent(selectedFarm.id)}`}
+                    className="inline-flex items-center gap-1 pt-1 text-xs font-medium text-sky-700 hover:text-sky-900"
+                  >
+                    Open farm <ExternalLink className="h-3 w-3" />
+                  </a>
                 </div>
               </InfoWindow>
             ) : null}
           </GoogleMap>
         </APIProvider>
       </div>
+      {!readOnlyMap ? (
+        <FarmSaveDialog
+          open={farmDialogOpen}
+          onOpenChange={setFarmDialogOpen}
+          boundary={pendingBoundary}
+          teamMembers={teamMembers}
+          substationNames={substationNames}
+          suggestedName={
+            expSub
+              ? `${expSub} — ${teamMembers[0]?.name || "Farm"}'s farm`
+              : undefined
+          }
+          onSaved={(farmId) => {
+            setPendingBoundary(null);
+            fetch("/api/farms")
+              .then((r) => r.json())
+              .then((data) => {
+                if (Array.isArray(data.items)) setLocalFarms(data.items);
+              })
+              .catch(() => undefined);
+            if (farmId) {
+              window.location.href = `/farms/${encodeURIComponent(farmId)}`;
+            }
+          }}
+        />
+      ) : null}
       <datalist id="map-sub-names">
         {substationNames.map((n) => (
           <option key={n} value={n} />
