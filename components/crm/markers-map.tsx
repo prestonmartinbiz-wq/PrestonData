@@ -2,12 +2,14 @@
 
 import {
   APIProvider,
+  ControlPosition,
   InfoWindow,
+  MapControl,
   Map as GoogleMap,
   Marker,
   useMap,
 } from "@vis.gl/react-google-maps";
-import { ExternalLink, MapPin, Pencil, Plus } from "lucide-react";
+import { ExternalLink, MapPin, Minus, Pencil, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -102,20 +104,35 @@ type SelectedParcel = {
  */
 function ParcelsLayer({
   enabled,
+  interactive = true,
   trackedSet,
   onSelect,
 }: {
   enabled: boolean;
+  /** When false, lines render but clicks pass through to the map (for drawing). */
+  interactive?: boolean;
   trackedSet: Set<string>;
   onSelect: (p: SelectedParcel) => void;
 }) {
   const map = useMap();
   const dataRef = useRef<google.maps.Data | null>(null);
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
 
   useEffect(() => {
     if (!map) return;
     const data = new google.maps.Data();
     dataRef.current = data;
+    data.setMap(map);
+    return () => {
+      data.setMap(null);
+      dataRef.current = null;
+    };
+  }, [map]);
+
+  useEffect(() => {
+    const data = dataRef.current;
+    if (!data) return;
     data.setStyle((feature) => {
       const apn = String(feature.getProperty("APN") || "");
       const tracked = trackedSet.has(normalizeApn(apn));
@@ -125,14 +142,20 @@ function ParcelsLayer({
         strokeOpacity: 0.9,
         fillColor: "#10b981",
         fillOpacity: tracked ? 0.2 : 0.04,
+        clickable: interactive,
       };
     });
-    data.setMap(map);
+  }, [trackedSet, interactive]);
+
+  useEffect(() => {
+    if (!map || !interactive) return;
+    const data = dataRef.current;
+    if (!data) return;
     const click = data.addListener("click", (e: google.maps.Data.MouseEvent) => {
       const apn = String(e.feature.getProperty("APN") || "").trim();
       const acresRaw = e.feature.getProperty("CALC_ACRES");
       const ll = e.latLng;
-      onSelect({
+      onSelectRef.current({
         apn,
         lat: ll ? ll.lat() : 0,
         lng: ll ? ll.lng() : 0,
@@ -140,12 +163,8 @@ function ParcelsLayer({
         tracked: trackedSet.has(normalizeApn(apn)),
       });
     });
-    return () => {
-      google.maps.event.removeListener(click);
-      data.setMap(null);
-      dataRef.current = null;
-    };
-  }, [map, trackedSet, onSelect]);
+    return () => google.maps.event.removeListener(click);
+  }, [map, trackedSet, interactive]);
 
   useEffect(() => {
     if (!map) return;
@@ -240,20 +259,31 @@ function FarmsLayer({
 function FarmDrawingTool({
   active,
   onComplete,
+  onFinishReady,
+  onVertexCountChange,
 }: {
   active: boolean;
   onComplete: (boundary: FarmBoundary) => void;
+  onFinishReady?: (finish: () => void) => void;
+  onVertexCountChange?: (count: number) => void;
 }) {
   const map = useMap();
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+  const onVertexCountChangeRef = useRef(onVertexCountChange);
+  onVertexCountChangeRef.current = onVertexCountChange;
   const verticesRef = useRef<{ lat: number; lng: number }[]>([]);
   const previewRef = useRef<google.maps.Polygon | null>(null);
 
   useEffect(() => {
-    if (!map || !active) return;
+    if (!map || !active) {
+      onFinishReady?.(() => undefined);
+      onVertexCountChangeRef.current?.(0);
+      return;
+    }
 
     verticesRef.current = [];
+    onVertexCountChangeRef.current?.(0);
 
     function cleanupPreview() {
       if (previewRef.current) {
@@ -261,16 +291,22 @@ function FarmDrawingTool({
         previewRef.current = null;
       }
       verticesRef.current = [];
+      onVertexCountChangeRef.current?.(0);
     }
 
     function finishPolygon() {
       const verts = verticesRef.current;
-      if (verts.length < 3) return;
+      if (verts.length < 3) {
+        toast.error("Place at least 3 points before finishing");
+        return;
+      }
       const ring: [number, number][] = verts.map((v) => [v.lng, v.lat]);
       ring.push([ring[0][0], ring[0][1]]);
       cleanupPreview();
       onCompleteRef.current({ type: "Polygon", coordinates: [ring] });
     }
+
+    onFinishReady?.(finishPolygon);
 
     function updatePreview() {
       const verts = verticesRef.current;
@@ -303,6 +339,7 @@ function FarmDrawingTool({
       }
 
       verts.push({ lat: latLng.lat(), lng: latLng.lng() });
+      onVertexCountChangeRef.current?.(verts.length);
       updatePreview();
     });
 
@@ -315,9 +352,56 @@ function FarmDrawingTool({
       google.maps.event.removeListener(clickListener);
       google.maps.event.removeListener(dblClickListener);
       cleanupPreview();
+      onFinishReady?.(() => undefined);
     };
-  }, [map, active]);
+  }, [map, active, onFinishReady]);
 
+  return null;
+}
+
+function MapZoomControls() {
+  const map = useMap();
+
+  function zoomBy(delta: number) {
+    if (!map) return;
+    const z = map.getZoom();
+    if (z == null) return;
+    map.setZoom(z + delta);
+  }
+
+  return (
+    <MapControl position={ControlPosition.RIGHT_BOTTOM}>
+      <div className="mb-3 mr-2 flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-md">
+        <button
+          type="button"
+          aria-label="Zoom in"
+          onClick={() => zoomBy(1)}
+          className="flex h-9 w-9 items-center justify-center text-slate-700 hover:bg-slate-50"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+        <div className="border-t border-slate-100" />
+        <button
+          type="button"
+          aria-label="Zoom out"
+          onClick={() => zoomBy(-1)}
+          className="flex h-9 w-9 items-center justify-center text-slate-700 hover:bg-slate-50"
+        >
+          <Minus className="h-4 w-4" />
+        </button>
+      </div>
+    </MapControl>
+  );
+}
+
+/** Parcel lines only load at zoom ≥ 16 — nudge zoom when drawing a farm. */
+function AutoZoomForParcelLines({ active }: { active: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map || !active) return;
+    const z = map.getZoom() ?? 0;
+    if (z < 16) map.setZoom(16);
+  }, [map, active]);
   return null;
 }
 
@@ -510,6 +594,8 @@ export function MarkersMap({
   const [farmDraftMeta, setFarmDraftMeta] = useState<FarmDraftMeta | null>(null);
   const [pendingBoundary, setPendingBoundary] = useState<FarmBoundary | null>(null);
   const [savingFarm, setSavingFarm] = useState(false);
+  const [drawVertexCount, setDrawVertexCount] = useState(0);
+  const finishDrawingRef = useRef<() => void>(() => undefined);
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
   const [localFarms, setLocalFarms] = useState<Farm[]>(farms);
   const [selected, setSelected] = useState<MapMarker | null>(null);
@@ -575,13 +661,22 @@ export function MarkersMap({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save farm");
       toast.success(
-        `Farm saved with ${data.farm?.members?.length ?? 0} parcel(s)`
+        `Farm saved with ${data.farm?.members?.length ?? 0} parcel(s)`,
+        data.farm?.id
+          ? {
+              action: {
+                label: "View farm",
+                onClick: () => {
+                  window.location.href = `/farms/${encodeURIComponent(data.farm.id)}`;
+                },
+              },
+            }
+          : undefined
       );
       cancelFarmWizard();
       refreshLocalFarms();
-      if (data.farm?.id) {
-        window.location.href = `/farms/${encodeURIComponent(data.farm.id)}`;
-      }
+      setShowFarms(true);
+      setShowParcelLines(true);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save farm");
     } finally {
@@ -593,7 +688,9 @@ export function MarkersMap({
     setFarmDraftMeta(meta);
     setFarmWizardStep("drawing");
     setShowFarms(true);
+    setShowParcelLines(true);
     setPendingBoundary(null);
+    setDrawVertexCount(0);
   }
 
   const onSelectFarm = useCallback((farm: Farm) => {
@@ -762,8 +859,12 @@ export function MarkersMap({
         ) : null}
         {farmWizardStep === "drawing" ? (
           <span className="text-xs text-rose-600">
-            Drawing <strong>{farmDraftMeta?.name}</strong> — click vertices,
-            double-click or click first point to close
+            Drawing <strong>{farmDraftMeta?.name}</strong> — click lot corners on
+            the map, then <strong>Finish shape</strong> below
+          </span>
+        ) : farmWizardStep === "review" ? (
+          <span className="text-xs text-emerald-700 font-medium">
+            Shape complete — click <strong>Save farm</strong> below
           </span>
         ) : showParcelLines ? (
           <span className="text-xs text-slate-400">
@@ -799,96 +900,47 @@ export function MarkersMap({
         className="relative overflow-hidden rounded-xl border border-slate-200"
         style={{ height }}
       >
-        {!readOnlyMap ? (
-          <button
-            type="button"
-            onClick={() => {
-              if (farmWizardStep === "idle") setFarmSetupOpen(true);
-            }}
-            disabled={farmWizardStep !== "idle"}
-            className={cn(
-              "absolute top-3 right-3 z-20 flex h-11 w-11 items-center justify-center rounded-lg border shadow-md transition",
-              farmWizardStep !== "idle"
-                ? "border-rose-300 bg-rose-50 text-rose-700"
-                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-            )}
-            title="Draw a new farm territory"
-          >
-            <Pencil className="h-5 w-5" />
-          </button>
-        ) : null}
-        {farmWizardStep === "review" && farmDraftMeta && pendingBoundary ? (
-          <div className="absolute bottom-3 left-3 right-3 z-20 rounded-lg border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur-sm">
-            <p className="text-sm font-semibold text-slate-900">
-              {farmDraftMeta.name}
-            </p>
-            <p className="text-xs text-slate-500">
-              {farmDraftMeta.substationOfInterest || "No substation"} ·{" "}
-              {farmDraftMeta.assignedTo}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={saveFarm}
-                disabled={savingFarm}
-                className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
-              >
-                {savingFarm ? "Saving…" : "Save farm"}
-              </button>
-              <button
-                type="button"
-                onClick={discardFarmDrawing}
-                disabled={savingFarm}
-                className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-              >
-                Discard drawing
-              </button>
-              <button
-                type="button"
-                onClick={cancelFarmWizard}
-                disabled={savingFarm}
-                className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 disabled:opacity-60"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : null}
-        <APIProvider apiKey={apiKey}>
-          <GoogleMap
-            defaultCenter={center}
-            defaultZoom={11}
-            defaultBounds={bounds ?? undefined}
-            gestureHandling="greedy"
-            disableDefaultUI={false}
-            mapTypeControl
-            streetViewControl={false}
-            style={{ width: "100%", height: "100%" }}
-          >
-            <ParcelsLayer
-              enabled={
-                showParcelLines && farmWizardStep === "idle"
-              }
-              trackedSet={trackedSet}
-              onSelect={onSelectParcel}
-            />
-            <FarmsLayer
-              farms={localFarms}
-              enabled={showFarms || readOnlyMap}
-              highlightFarmId={highlightFarmId}
-              onSelect={onSelectFarm}
-            />
-            <DraftFarmPolygon
-              boundary={
-                farmWizardStep === "review" ? pendingBoundary : null
-              }
-            />
-            {!readOnlyMap ? (
-              <FarmDrawingTool
-                active={farmWizardStep === "drawing"}
-                onComplete={onFarmBoundaryComplete}
+        <div className="absolute inset-0">
+          <APIProvider apiKey={apiKey}>
+            <GoogleMap
+              defaultCenter={center}
+              defaultZoom={11}
+              defaultBounds={bounds ?? undefined}
+              gestureHandling="greedy"
+              disableDefaultUI={false}
+              mapTypeControl
+              streetViewControl={false}
+              zoomControl={false}
+              style={{ width: "100%", height: "100%" }}
+            >
+              <ParcelsLayer
+                enabled={showParcelLines}
+                interactive={farmWizardStep === "idle"}
+                trackedSet={trackedSet}
+                onSelect={onSelectParcel}
               />
-            ) : null}
+              <FarmsLayer
+                farms={localFarms}
+                enabled={showFarms || readOnlyMap}
+                highlightFarmId={highlightFarmId}
+                onSelect={onSelectFarm}
+              />
+              <DraftFarmPolygon
+                boundary={
+                  farmWizardStep === "review" ? pendingBoundary : null
+                }
+              />
+              {!readOnlyMap ? (
+                <FarmDrawingTool
+                  active={farmWizardStep === "drawing"}
+                  onComplete={onFarmBoundaryComplete}
+                  onFinishReady={(finish) => {
+                    finishDrawingRef.current = finish;
+                  }}
+                  onVertexCountChange={setDrawVertexCount}
+                />
+              ) : null}
+              <MapZoomControls />
             {visible.map((m) => (
               <Marker
                 key={`${m.kind}-${m.id}`}
@@ -1105,6 +1157,99 @@ export function MarkersMap({
             ) : null}
           </GoogleMap>
         </APIProvider>
+        </div>
+
+        {!readOnlyMap ? (
+          <div className="pointer-events-none absolute inset-0 z-30">
+            <button
+              type="button"
+              onClick={() => {
+                if (farmWizardStep === "idle") setFarmSetupOpen(true);
+              }}
+              disabled={farmWizardStep !== "idle"}
+              className={cn(
+                "pointer-events-auto absolute top-3 right-3 flex h-11 w-11 items-center justify-center rounded-lg border shadow-md transition",
+                farmWizardStep !== "idle"
+                  ? "border-rose-300 bg-rose-50 text-rose-700"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+              )}
+              title="Draw a new farm territory"
+            >
+              <Pencil className="h-5 w-5" />
+            </button>
+
+            {farmWizardStep === "drawing" && farmDraftMeta ? (
+              <div
+                className="pointer-events-auto absolute bottom-3 left-3 right-14 rounded-lg border border-rose-200 bg-white/95 p-3 shadow-lg backdrop-blur-sm"
+              >
+                <p className="text-sm font-semibold text-slate-900">
+                  {farmDraftMeta.name}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {drawVertexCount} point{drawVertexCount === 1 ? "" : "s"} placed
+                  · parcel lines stay on while you draw
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => finishDrawingRef.current()}
+                    disabled={drawVertexCount < 3}
+                    className="rounded-md bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+                  >
+                    Finish shape
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelFarmWizard}
+                    className="rounded-md px-3 py-2 text-xs font-medium text-slate-500 hover:text-slate-800"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {farmWizardStep === "review" && farmDraftMeta && pendingBoundary ? (
+              <div
+                className="pointer-events-auto absolute bottom-3 left-3 right-14 rounded-lg border border-emerald-200 bg-white p-3 shadow-lg"
+              >
+                <p className="text-sm font-semibold text-slate-900">
+                  Ready to save: {farmDraftMeta.name}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {farmDraftMeta.substationOfInterest || "No substation"} ·{" "}
+                  {farmDraftMeta.assignedTo}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={saveFarm}
+                    disabled={savingFarm}
+                    className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                  >
+                    {savingFarm ? "Saving…" : "Save farm"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={discardFarmDrawing}
+                    disabled={savingFarm}
+                    className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    Redraw
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelFarmWizard}
+                    disabled={savingFarm}
+                    className="rounded-md px-3 py-2 text-xs font-medium text-slate-500 hover:text-slate-800 disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       {!readOnlyMap ? (
         <FarmSetupDialog
