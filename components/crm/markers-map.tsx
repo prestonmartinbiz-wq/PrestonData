@@ -941,6 +941,12 @@ export function MarkersMap({
                 />
               ) : null}
               <MapZoomControls />
+              <AutoZoomForParcelLines
+                active={
+                  showParcelLines &&
+                  (farmWizardStep === "drawing" || farmWizardStep === "review")
+                }
+              />
             {visible.map((m) => (
               <Marker
                 key={`${m.kind}-${m.id}`}
